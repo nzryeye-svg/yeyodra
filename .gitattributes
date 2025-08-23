@@ -1,0 +1,45 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.rs text
+*.js text
+*.jsx text
+*.ts text
+*.tsx text
+*.json text
+*.toml text
+*.md text
+*.txt text
+*.yml text
+*.yaml text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.zip binary
+*.tar.gz binary
+*.rar binary
+*.7z binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# Ensure shell scripts have LF line endings
+*.sh text eol=lf
+
+# Ensure batch files have CRLF line endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Archives should not be modified
+*.zip -text
+*.tar -text
+*.gz -text
+*.7z -text
+*.rar -text

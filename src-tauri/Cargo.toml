@@ -1,0 +1,34 @@
+[package]
+name = "yeyodra"
+version = "0.1.0"
+description = "Steam Game Manager"
+authors = ["Yeyodra Team"]
+license = "MIT"
+repository = ""
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = ["dialog-all", "fs-all", "http-all", "shell-open"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.28", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
+anyhow = "1.0"
+futures = "0.3"
+zip = "0.6"
+bytes = "1.4"
+sanitize-filename = "0.4"
+walkdir = "2.3"
+uuid = { version = "1.4", features = ["v4"] }
+dirs = "5.0"
+once_cell = "1.19"
+
+[features]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

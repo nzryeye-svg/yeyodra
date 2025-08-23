@@ -1,0 +1,119 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production builds
+dist/
+build/
+
+# Rust/Cargo
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Tauri
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.tmp
+*.temp
+*.log
+*.lnk
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+
+# Cache and temporary files
+.cache/
+.temp/
+.tmp/
+*.cache
+*.temp
+
+# Downloads directory (untuk development)
+downloads/
+*.zip
+*.rar
+*.7z
+
+# Steam directories (jangan commit file steam)
+Steam/
+config/
+
+# Application data and cache
+*.db
+*.sqlite
+*.sqlite3
+cache/
+logs/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Tauri bundle outputs
+src-tauri/target/release/bundle/
+src-tauri/target/debug/bundle/
+
+# Generated files
+generated/
+auto-generated/
+
+# User-specific files
+accounts.json
+notes.json
+settings.json
+user-data/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Compressed files (untuk menghindari file game yang besar)
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.dmg
+*.iso
+
+# Development tools
+.nyc_output/
+coverage/
+.coverage
+htmlcov/
+
+# Miscellaneous
+*.orig
+*.patch
+*.diff
