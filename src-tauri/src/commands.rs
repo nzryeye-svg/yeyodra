@@ -10,6 +10,7 @@ use uuid::Uuid;
 use walkdir::WalkDir;
 use zip::ZipArchive;
 use reqwest::Client;
+use std::path::PathBuf;
 
 // Application state type
 type AppState = crate::AppState;
@@ -37,6 +38,12 @@ pub async fn search_games(query: String, page: usize, per_page: usize) -> Result
 // Command to get game details by AppID
 #[command]
 pub async fn get_game_details(app_id: String) -> Result<SteamAppInfo, String> {
+    // Try to load from cache first
+    if let Ok(cached_info) = load_steam_app_info_from_cache(&app_id) {
+        println!("Loaded game details for AppID {} from cache", app_id);
+        return Ok(cached_info);
+    }
+
     println!("Fetching game details for AppID: {}", app_id);
     
     let client = Client::new();
@@ -58,6 +65,12 @@ pub async fn get_game_details(app_id: String) -> Result<SteamAppInfo, String> {
                         if app_data.success {
                             if let Some(data) = &app_data.data {
                                 println!("Successfully fetched details for {}: {}", app_id, data.name);
+                                
+                                // Save to cache
+                                if let Err(e) = save_steam_app_info_to_cache(&app_id, data) {
+                                    println!("Failed to cache game details for {}: {}", app_id, e);
+                                }
+                                
                                 return Ok(data.clone());
                             }
                         }
@@ -280,4 +293,52 @@ pub async fn get_batch_game_details(app_ids: Vec<String>) -> Result<Vec<crate::m
     
     println!("Successfully fetched {} out of requested game details", results.len());
     Ok(results)
+}
+
+// Helper functions for caching
+fn get_steam_app_info_cache_dir() -> Result<PathBuf, String> {
+    if let Some(cache_dir) = dirs_next::cache_dir() {
+        let yeyodra_cache = cache_dir.join("yeyodra").join("steam_app_info");
+        std::fs::create_dir_all(&yeyodra_cache).map_err(|e| e.to_string())?;
+        Ok(yeyodra_cache)
+    } else {
+        Err("Unable to find cache directory".to_string())
+    }
+}
+
+fn get_steam_cache_file_path(app_id: &str) -> Result<PathBuf, String> {
+    let cache_dir = get_steam_app_info_cache_dir()?;
+    Ok(cache_dir.join(format!("{}.json", app_id)))
+}
+
+fn is_steam_cache_valid(file_path: &PathBuf) -> bool {
+    if let Ok(metadata) = std::fs::metadata(file_path) {
+        if let Ok(modified) = metadata.modified() {
+            if let Ok(duration) = modified.elapsed() {
+                // Cache is valid for 24 hours
+                return duration.as_secs() < 24 * 60 * 60;
+            }
+        }
+    }
+    false
+}
+
+fn load_steam_app_info_from_cache(app_id: &str) -> Result<SteamAppInfo, String> {
+    let cache_path = get_steam_cache_file_path(app_id)?;
+    
+    if cache_path.exists() && is_steam_cache_valid(&cache_path) {
+        let content = std::fs::read_to_string(&cache_path).map_err(|e| e.to_string())?;
+        let steam_app_info: SteamAppInfo = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        Ok(steam_app_info)
+    } else {
+        Err("Cache not found or expired".to_string())
+    }
+}
+
+fn save_steam_app_info_to_cache(app_id: &str, steam_app_info: &SteamAppInfo) -> Result<(), String> {
+    let cache_path = get_steam_cache_file_path(app_id)?;
+    let content = serde_json::to_string_pretty(steam_app_info).map_err(|e| e.to_string())?;
+    std::fs::write(&cache_path, content).map_err(|e| e.to_string())?;
+    println!("Cached Steam app info for AppID {}", app_id);
+    Ok(())
 }

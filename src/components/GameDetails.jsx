@@ -182,9 +182,21 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
                 // Catalogue mode button
                 <button 
                   className="banner-action-btn download-btn"
-                  onClick={() => {
+                  onClick={async () => {
                     if (onDownload && !isDownloading) {
-                      onDownload(game);
+                      try {
+                        if (showNotification) {
+                          showNotification.showInfo(`Starting download for ${game.game_name}...`);
+                        }
+                        await onDownload(game);
+                        if (showNotification) {
+                          showNotification.showSuccess(`Download completed for ${game.game_name}!`);
+                        }
+                      } catch (error) {
+                        if (showNotification) {
+                          showNotification.showError(`Download failed for ${game.game_name}: ${error.message || error}`);
+                        }
+                      }
                     }
                   }}
                   disabled={isDownloading}

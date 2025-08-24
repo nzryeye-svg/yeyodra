@@ -68,13 +68,13 @@ function App() {
       });
       
       if (result) {
-        // Show success notification (you can implement toast later)
-        console.log(`Download completed for ${game.game_name}`);
+        return result; // Success
       } else {
-        console.log(`No data found for ${game.game_name}`);
+        throw new Error(`No data found for ${game.game_name}`);
       }
     } catch (err) {
       setError(`Download failed: ${err}`);
+      throw err; // Re-throw for notification handling
     } finally {
       setDownloadingGames(prev => {
         const newSet = new Set(prev);
@@ -213,6 +213,7 @@ function App() {
                     onBack={handleBackFromDetails}
                     onDownload={handleDownload}
                     isDownloading={downloadingGames.has(selectedGame.app_id)}
+                    showNotification={{ showSuccess, showError, showWarning, showInfo }}
                   />
                 ) : (
                   <>
@@ -281,7 +282,7 @@ function App() {
                   game={selectedLibraryGame}
                   onBack={handleBackFromLibraryDetails}
                   isLibraryMode={true}
-                  showNotification={showLibraryNotification}
+                  showNotification={{ showSuccess, showError, showWarning, showInfo }}
                 />
               ) : (
                 <div className="placeholder-container">
