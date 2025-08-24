@@ -46,14 +46,22 @@ pub async fn get_game_details(app_id: String) -> Result<SteamAppInfo, String> {
 
     println!("Fetching game details for AppID: {}", app_id);
     
-    let client = Client::new();
+    // Create isolated client with shorter timeout to prevent cascade failures
+    let client = Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap_or_else(|_| Client::new());
+    
     let url = format!("https://store.steampowered.com/api/appdetails?appids={}", app_id);
     
-    match client.get(&url)
-        .timeout(Duration::from_secs(10))
-        .send()
-        .await {
-        Ok(response) => {
+    // Use tokio timeout as additional protection
+    let response_result = tokio::time::timeout(
+        Duration::from_secs(8),
+        client.get(&url).send()
+    ).await;
+    
+    match response_result {
+        Ok(Ok(response)) => {
             if !response.status().is_success() {
                 println!("Steam API returned non-success status: {}", response.status());
                 return Err(format!("Steam API returned status {}", response.status()));
@@ -86,8 +94,13 @@ pub async fn get_game_details(app_id: String) -> Result<SteamAppInfo, String> {
                 }
             }
         },
-        Err(e) => {
-            let msg = format!("Error fetching from Steam API: {}", e);
+        Ok(Err(e)) => {
+            let msg = format!("HTTP error fetching from Steam API: {}", e);
+            println!("{}", msg);
+            Err(msg)
+        },
+        Err(_) => {
+            let msg = format!("Timeout fetching from Steam API for AppID {}", app_id);
             println!("{}", msg);
             Err(msg)
         }

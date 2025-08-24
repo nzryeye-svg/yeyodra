@@ -30,6 +30,10 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
       if (!game || !game.app_id) return;
       setLoading(true);
       setError(null);
+      // CRITICAL: Reset ALL image states when game changes
+      setImageError(false);
+      setCurrentImageIndex(0);
+      setImageFallbackComplete(false);
       try {
         const gameDetails = await invoke('get_game_details', { appId: game.app_id });
         setDetails(gameDetails);
@@ -47,6 +51,37 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
   const handleImageError = () => {
     console.log("Main banner image failed to load, trying fallback...");
     setImageError(true);
+  };
+
+  // Advanced image fallback state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageFallbackComplete, setImageFallbackComplete] = useState(false);
+
+  // Generate multiple fallback URLs for better reliability
+  const getImageUrls = (appId) => {
+    return [
+      `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/library_hero.jpg`,
+      `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/library_hero.jpg`,
+      `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`,
+      `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
+      details?.header_image // Use API provided URL if available
+    ].filter(Boolean);
+  };
+
+
+
+  // Advanced fallback handler
+  const handleAdvancedImageError = () => {
+    const imageUrls = getImageUrls(details?.steam_appid);
+    const nextIndex = currentImageIndex + 1;
+    
+    if (nextIndex < imageUrls.length) {
+      console.log(`Image ${currentImageIndex + 1} failed, trying fallback ${nextIndex + 1}...`);
+      setCurrentImageIndex(nextIndex);
+    } else {
+      console.log("All image fallbacks failed, showing placeholder");
+      setImageFallbackComplete(true);
+    }
   };
 
   // Library actions
@@ -127,24 +162,30 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
       );
     }
 
-            // Use larger image for better banner display
-        const headerImageUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${details.steam_appid}/library_hero.jpg`;
-        const fallbackImageUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${details.steam_appid}/header.jpg`;
+    // Get current image URL from fallback array
+    const imageUrls = getImageUrls(details.steam_appid);
+    const currentImageUrl = imageUrls[currentImageIndex] || imageUrls[0];
 
     return (
       <>
         <div 
           className="game-detail-page__banner"
-          style={{ backgroundImage: `url(${!imageError ? headerImageUrl : fallbackImageUrl})` }}
+          style={{ 
+            backgroundImage: imageFallbackComplete ? 'none' : `url(${currentImageUrl})`,
+            backgroundColor: imageFallbackComplete ? '#1a1a1a' : 'transparent'
+          }}
         >
-          {/* Hidden img to detect if main image fails to load */}
-          <img 
-            src={headerImageUrl} 
-            alt="" 
-            style={{ display: 'none' }} 
-            onError={handleImageError} 
-          />
-          {imageError && <div className="banner-placeholder"><FaGamepad /></div>}
+          {/* Hidden img to detect if current image fails to load */}
+          {!imageFallbackComplete && (
+            <img 
+              key={`${details.steam_appid}-${currentImageIndex}`} // Force re-render on URL change
+              src={currentImageUrl} 
+              alt="" 
+              style={{ display: 'none' }} 
+              onError={handleAdvancedImageError} 
+            />
+          )}
+          {imageFallbackComplete && <div className="banner-placeholder"><FaGamepad /></div>}
           <div className="banner-overlay">
             {/* Action buttons */}
             <div className="banner-actions">

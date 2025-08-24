@@ -213,29 +213,69 @@ fn find_lua_file_for_appid(steam_config_path: &Path, app_id_to_find: &str) -> Re
     Err(format!("Could not find a .lua file for AppID: {}", app_id_to_find))
 }
 
-/// Fetch game images from Steam API
+/// Fetch game images from Steam API with fallback to CDN
 async fn fetch_game_images(app_id: &str) -> (Option<String>, Option<String>) {
+    // First try Steam API with isolated client and short timeout
+    let api_result = try_fetch_from_steam_api(app_id).await;
+    
+    // If API fails or returns None, fallback to CDN URLs
+    match api_result {
+        (Some(capsule), Some(header)) => {
+            println!("Successfully fetched images from Steam API for AppID {}", app_id);
+            (Some(capsule), Some(header))
+        }
+        _ => {
+            println!("Steam API failed for AppID {}, using CDN fallback", app_id);
+            // Fallback to reliable CDN URLs
+            let capsule_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/capsule_231x87.jpg", app_id);
+            let header_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg", app_id);
+            (Some(capsule_image), Some(header_image))
+        }
+    }
+}
+
+/// Try to fetch from Steam API with proper error isolation
+async fn try_fetch_from_steam_api(app_id: &str) -> (Option<String>, Option<String>) {
+    use std::time::Duration;
+    
+    // Create isolated client with short timeout to prevent cascade failures
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+    
     let url = format!("https://store.steampowered.com/api/appdetails?appids={}", app_id);
     
-    match reqwest::get(&url).await {
-        Ok(response) => {
-            if let Ok(text) = response.text().await {
-                if let Ok(steam_response) = serde_json::from_str::<SteamGameDetailsResponse>(&text) {
-                    if let Some(app_data) = steam_response.apps.get(app_id) {
-                        if app_data.success {
-                            if let Some(data) = &app_data.data {
-                                return (
-                                    data.capsule_image.clone(),
-                                    data.header_image.clone()
-                                );
+    // Use timeout to prevent hanging
+    let response_result = tokio::time::timeout(
+        Duration::from_secs(5),
+        client.get(&url).send()
+    ).await;
+    
+    match response_result {
+        Ok(Ok(response)) => {
+            if response.status().is_success() {
+                if let Ok(text) = response.text().await {
+                    if let Ok(steam_response) = serde_json::from_str::<SteamGameDetailsResponse>(&text) {
+                        if let Some(app_data) = steam_response.apps.get(app_id) {
+                            if app_data.success {
+                                if let Some(data) = &app_data.data {
+                                    return (
+                                        data.capsule_image.clone(),
+                                        data.header_image.clone()
+                                    );
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        Err(_e) => {
-            // Silently ignore API errors
+        Ok(Err(e)) => {
+            println!("HTTP error for AppID {}: {}", app_id, e);
+        }
+        Err(_) => {
+            println!("Timeout for AppID {}", app_id);
         }
     }
     
