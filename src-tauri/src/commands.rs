@@ -328,8 +328,18 @@ fn is_steam_cache_valid(file_path: &PathBuf) -> bool {
     if let Ok(metadata) = std::fs::metadata(file_path) {
         if let Ok(modified) = metadata.modified() {
             if let Ok(duration) = modified.elapsed() {
-                // Cache is valid for 24 hours
-                return duration.as_secs() < 24 * 60 * 60;
+                // Staggered cache expiry: 20-28 hours based on app_id hash
+                // This prevents all cache from expiring at the same time
+                let app_id_hash = file_path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.chars().map(|c| c as u32).sum::<u32>())
+                    .unwrap_or(0);
+                
+                let base_hours = 20;
+                let additional_hours = (app_id_hash % 8) as u64; // 0-7 additional hours
+                let cache_duration_secs = (base_hours + additional_hours) * 60 * 60;
+                
+                return duration.as_secs() < cache_duration_secs;
             }
         }
     }

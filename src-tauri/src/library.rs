@@ -99,8 +99,8 @@ pub async fn get_library_games() -> Result<Vec<LibraryGameInfo>, String> {
                             .map(|game| game.game_name)
                             .unwrap_or_else(|| format!("AppID: {}", app_id));
                         
-                        // Get images from cached game details (reuse existing cache system)
-                        let (capsule_image, header_image) = get_images_from_cached_details(&app_id).await;
+                                // Get images from cached game details (non-blocking, fast CDN fallback)
+        let (capsule_image, header_image) = get_images_from_cached_details(&app_id).await;
                         
                         games.push(LibraryGameInfo {
                             app_id,
@@ -121,6 +121,17 @@ pub async fn get_library_games() -> Result<Vec<LibraryGameInfo>, String> {
     
     // Sort games by name
     games.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    
+    // Start background refresh for games with expired cache (non-blocking)
+    let expired_games: Vec<String> = games.iter()
+        .filter(|game| !is_cache_valid_for_app(&game.app_id))
+        .map(|game| game.app_id.clone())
+        .collect();
+    
+    if !expired_games.is_empty() {
+        println!("Starting background refresh for {} games with expired cache", expired_games.len());
+        tokio::spawn(background_refresh_cache(expired_games));
+    }
     
     Ok(games)
 }
@@ -213,37 +224,29 @@ fn find_lua_file_for_appid(steam_config_path: &Path, app_id_to_find: &str) -> Re
     Err(format!("Could not find a .lua file for AppID: {}", app_id_to_find))
 }
 
-/// Get game images from cached game details or fetch if needed
+/// Get game images with smart caching strategy
 async fn get_images_from_cached_details(app_id: &str) -> (Option<String>, Option<String>) {
-    // Try to load from the same cache system used by get_game_details
+    // Always use CDN URLs for immediate display (fast fallback)
+    let capsule_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/capsule_231x87.jpg", app_id);
+    let default_header_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg", app_id);
+    
+    // Try to load from cache for better quality images
     if let Ok(cached_data) = load_steam_app_info_from_cache(app_id) {
         println!("Loaded images for AppID {} from cached Steam data", app_id);
         
-        // Use cached header_image if not empty, otherwise fallback to CDN
+        // Use cached header_image if available and not empty
         let header_image = if cached_data.header_image.is_empty() {
-            format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg", app_id)
+            default_header_image
         } else {
             cached_data.header_image.clone()
         };
-        let capsule_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/capsule_231x87.jpg", app_id);
         
         return (Some(capsule_image), Some(header_image));
     }
     
-    // If no cache, fetch from Steam API once and cache it
-    println!("No cache found for AppID {}, fetching from Steam API and caching", app_id);
-    match try_fetch_from_steam_api(app_id).await {
-        (Some(capsule), Some(header)) => {
-            println!("Successfully fetched and will cache images for AppID {}", app_id);
-            (Some(capsule), Some(header))
-        }
-        _ => {
-            println!("Steam API failed for AppID {}, using CDN fallback", app_id);
-            let capsule_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/capsule_231x87.jpg", app_id);
-            let header_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg", app_id);
-            (Some(capsule_image), Some(header_image))
-        }
-    }
+    // If no cache, return CDN URLs immediately (no blocking API call)
+    println!("No cache found for AppID {}, using CDN fallback for immediate display", app_id);
+    (Some(capsule_image), Some(default_header_image))
 }
 
 // Helper function to load from the same cache used by commands.rs
@@ -273,12 +276,63 @@ fn is_steam_cache_valid(file_path: &std::path::PathBuf) -> bool {
     if let Ok(metadata) = std::fs::metadata(file_path) {
         if let Ok(modified) = metadata.modified() {
             if let Ok(duration) = modified.elapsed() {
-                // Cache is valid for 24 hours
-                return duration.as_secs() < 24 * 60 * 60;
+                // Staggered cache expiry: 20-28 hours based on app_id hash
+                // This prevents all cache from expiring at the same time
+                let app_id_hash = file_path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.chars().map(|c| c as u32).sum::<u32>())
+                    .unwrap_or(0);
+                
+                let base_hours = 20;
+                let additional_hours = (app_id_hash % 8) as u64; // 0-7 additional hours
+                let cache_duration_secs = (base_hours + additional_hours) * 60 * 60;
+                
+                return duration.as_secs() < cache_duration_secs;
             }
         }
     }
     false
+}
+
+/// Check if cache is valid for a specific app
+fn is_cache_valid_for_app(app_id: &str) -> bool {
+    if let Ok(cache_path) = get_steam_cache_file_path(app_id) {
+        is_steam_cache_valid(&cache_path)
+    } else {
+        false
+    }
+}
+
+/// Background function to refresh expired cache with rate limiting
+async fn background_refresh_cache(app_ids: Vec<String>) {
+    // Use semaphore for rate limiting (max 3 concurrent API calls)
+    let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(3));
+    let mut tasks = Vec::new();
+    
+    for app_id in app_ids {
+        let semaphore = semaphore.clone();
+        let task = tokio::spawn(async move {
+            let _permit = semaphore.acquire().await.unwrap();
+            
+            // Add small delay between requests to be nice to Steam API
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            
+            println!("Background refreshing cache for AppID: {}", app_id);
+            
+            // Try to fetch and cache from Steam API
+            if let Ok(details) = crate::commands::get_game_details(app_id.clone()).await {
+                println!("Successfully refreshed cache for AppID: {}", app_id);
+            } else {
+                println!("Failed to refresh cache for AppID: {}", app_id);
+            }
+        });
+        
+        tasks.push(task);
+    }
+    
+    // Wait for all background tasks to complete
+    futures::future::join_all(tasks).await;
+    println!("Background cache refresh completed");
 }
 
 /// Fetch game images from Steam API with fallback to CDN (kept for compatibility)
