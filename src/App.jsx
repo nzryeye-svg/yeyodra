@@ -63,8 +63,8 @@ function App() {
     setIsLoadingFeatured(true);
     setError('');
     try {
-      // Featured AppIDs as requested
-      const featuredAppIds = ['2622380', '2322010'];
+      // Featured AppIDs with Demon Slayer as main featured game
+      const featuredAppIds = ['2928600', '2322010', '1888930', '2651280', '1593500', '1817070', '2622380'];
       const gamesData = [];
       
       for (const appId of featuredAppIds) {
@@ -230,7 +230,11 @@ function App() {
             {activeTab === 'home' && (
               <div className="home-container">
                 <h2 className="page-title">Featured</h2>
-                <Featured />
+                <Featured 
+                  featuredGame={featuredGames.length > 0 ? featuredGames[0] : null}
+                  isLoading={isLoadingFeatured}
+                  onGameClick={handleFeaturedGameClick}
+                />
                 <CategoryButtons 
                   activeCategory={activeCategory} 
                   onCategoryChange={setActiveCategory} 
@@ -247,7 +251,7 @@ function App() {
                     )}
                     
                     {!isLoadingFeatured && featuredGames.length > 0 && (
-                      featuredGames.map((game) => (
+                      featuredGames.slice(1).map((game) => (
                         <GameCard
                           key={game.app_id}
                           game={game}
