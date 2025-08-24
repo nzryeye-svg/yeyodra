@@ -45,6 +45,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             search_games,
             get_game_details,
+            download_game,
             get_settings,
             save_settings,
             get_batch_game_details,

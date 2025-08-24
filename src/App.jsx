@@ -20,6 +20,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [downloadingGames, setDownloadingGames] = useState(new Set());
+
   const [activeCategory, setActiveCategory] = useState('hot');
   const [selectedGame, setSelectedGame] = useState(null);
   const [showingDetails, setShowingDetails] = useState(false);

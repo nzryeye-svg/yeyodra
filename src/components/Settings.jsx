@@ -5,6 +5,7 @@ import './Settings.scss';
 
 export function Settings({ showNotification }) {
   const [settings, setSettings] = useState({
+    download_directory: '',
     keep_temporary_files: false,
     bypass_download_directory: ''
   });
@@ -113,8 +114,39 @@ export function Settings({ showNotification }) {
       <div className="settings__content">
         {/* Download Directories Section */}
         <section className="settings__section">
-          <h3 className="settings__section-title">📁 Bypass Directory</h3>
+          <h3 className="settings__section-title">📁 Download Directories</h3>
           
+          <div className="settings__item">
+            <div className="settings__item-header">
+              <label className="settings__label">Game Downloads Directory</label>
+              <p className="settings__description">Where downloaded game files will be saved</p>
+            </div>
+            <div className="settings__item-content">
+              <div className="settings__directory-input">
+                <input
+                  type="text"
+                  value={settings.download_directory}
+                  readOnly
+                  className="settings__directory-path"
+                  placeholder="Select download directory..."
+                />
+                <button
+                  className="settings__btn settings__btn--browse"
+                  onClick={() => selectDirectory('download_directory')}
+                >
+                  📁 Browse
+                </button>
+                <button
+                  className="settings__btn settings__btn--open"
+                  onClick={() => openDirectory(settings.download_directory)}
+                  disabled={!settings.download_directory}
+                >
+                  🔗 Open
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="settings__item">
             <div className="settings__item-header">
               <label className="settings__label">Bypass Downloads Directory</label>
