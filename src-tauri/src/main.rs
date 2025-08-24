@@ -4,10 +4,12 @@
 mod commands;
 mod models;
 mod game_database;
+mod library;
 
 use commands::*;
 use models::*;
 use game_database::GameDatabase;
+use library::*;
 use std::sync::{Arc, Mutex};
 use once_cell::sync::Lazy;
 
@@ -27,7 +29,7 @@ fn main() {
             settings: Mutex::new(AppSettings::default()),
         })
         .setup(|app| {
-            let app_handle = app.handle();
+            let _app_handle = app.handle();
             
             // Initialize database in background
             tauri::async_runtime::spawn(async move {
@@ -42,9 +44,19 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             search_games,
+            get_game_details,
             download_game,
             get_settings,
-            save_settings
+            save_settings,
+            get_batch_game_details,
+            // Library management from library.rs
+            check_steam_directories,
+            library::get_library_games,
+            library::update_game_files,
+            library::remove_game,
+            library::get_game_name_by_appid,
+            library::get_dlcs_in_lua,
+            library::sync_dlcs_in_lua
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

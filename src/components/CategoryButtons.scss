@@ -1,0 +1,89 @@
+@use "../scss/globals.scss" as globals;
+
+.category-buttons {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 calc(globals.$spacing-unit * 3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: calc(globals.$spacing-unit * 2);
+  margin-bottom: calc(globals.$spacing-unit * 3);
+
+  &__main {
+    display: flex;
+    gap: calc(globals.$spacing-unit * 2);
+  }
+
+  &__button {
+    background: none;
+    border: 2px solid globals.$border-color;
+    color: globals.$muted-color;
+    padding: calc(globals.$spacing-unit * 1.5) calc(globals.$spacing-unit * 2);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all ease 0.2s;
+    display: flex;
+    align-items: center;
+    gap: calc(globals.$spacing-unit / 2);
+    font-family: inherit;
+
+    &:hover {
+      border-color: globals.$brand-primary;
+      background-color: rgba(255, 87, 34, 0.1);
+      color: globals.$text-color;
+    }
+
+    &--active {
+      border-color: globals.$brand-primary;
+      background-color: globals.$brand-primary;
+      color: white;
+    }
+  }
+
+  &__surprise {
+    background: none;
+    border: 2px solid globals.$border-color;
+    color: globals.$muted-color;
+    padding: calc(globals.$spacing-unit * 1.5) calc(globals.$spacing-unit * 2);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all ease 0.2s;
+    display: flex;
+    align-items: center;
+    gap: calc(globals.$spacing-unit / 2);
+    font-family: inherit;
+
+    &:hover {
+      border-color: globals.$brand-secondary;
+      background-color: rgba(255, 112, 67, 0.1);
+      color: globals.$text-color;
+    }
+  }
+
+  &__icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+
+    &__main {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    &__button,
+    &__surprise {
+      flex: 1;
+      min-width: 140px;
+    }
+  }
+}

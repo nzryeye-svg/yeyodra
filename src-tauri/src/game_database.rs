@@ -139,35 +139,74 @@ impl GameDatabase {
             };
         }
         
-        let query_lower = query.trim().to_lowercase();
+        // Split query by comma for multiple search terms
+        let search_terms: Vec<String> = query.split(',')
+            .map(|term| term.trim().to_lowercase())
+            .filter(|term| !term.is_empty())
+            .collect();
         
-        // Check if query is a numeric AppID
-        if query_lower.chars().all(|c| c.is_ascii_digit()) && !query_lower.is_empty() {
-            if let Ok(app_id_num) = query_lower.parse::<u64>() {
-                if let Some(game) = apps.iter().find(|app| app.appid == app_id_num) {
-                    return SearchResults {
-                        games: vec![GameInfo {
-                            app_id: game.appid.to_string(),
-                            game_name: game.name.clone(),
-                            icon_url: Some(format!("https://cdn.akamai.steamstatic.com/steam/apps/{}/header.jpg", game.appid)),
-                        }],
-                        total: 1,
-                        page: 1,
-                        total_pages: 1,
-                        query: query.to_string(),
-                    };
+        // Only log search terms on first page
+        if page == 1 {
+            println!("Search terms: {:?}", search_terms);
+        }
+
+        // Check if the user is explicitly searching for a non-game type
+        let searching_for_non_game = search_terms.iter().any(|term| {
+            ["dlc", "soundtrack", "demo", "pack", "artbook", "trailer", "movie", "beta", "pass"].contains(&term.as_str())
+        });
+        
+        // Check if query is a numeric AppID (single term and all digits)
+        if search_terms.len() == 1 {
+            let query_lower = &search_terms[0];
+            if query_lower.chars().all(|c| c.is_ascii_digit()) && !query_lower.is_empty() {
+                if let Ok(app_id_num) = query_lower.parse::<u64>() {
+                    if let Some(game) = apps.iter().find(|app| app.appid == app_id_num) {
+                        return SearchResults {
+                            games: vec![GameInfo {
+                                app_id: game.appid.to_string(),
+                                game_name: game.name.clone(),
+                                icon_url: Some(format!("https://cdn.akamai.steamstatic.com/steam/apps/{}/header.jpg", game.appid)),
+                            }],
+                            total: 1,
+                            page: 1,
+                            total_pages: 1,
+                            query: query.to_string(),
+                        };
+                    }
                 }
             }
         }
         
-        // Perform name-based search
-        let matching_apps: Vec<_> = apps.iter()
-            .filter(|app| {
-                let app_name_lower = app.name.to_lowercase();
-                app_name_lower.contains(&query_lower)
-            })
-            .cloned()
-            .collect();
+        // Perform name-based search with filtering
+        let matching_apps: Vec<_> = apps.iter().filter(|app| {
+            let app_name_lower = app.name.to_lowercase();
+            
+            // The item must match one of the search terms to even be considered.
+            let matches_query = search_terms.iter().any(|term| app_name_lower.contains(term));
+            if !matches_query {
+                return false;
+            }
+
+            // If the user is specifically looking for DLC, packs, etc., don't filter them.
+            if searching_for_non_game {
+                return true;
+            }
+
+            // Otherwise, filter out items containing common non-game keywords.
+            let is_non_game = [
+                "dlc", "soundtrack", "demo", "pack", "sdk", "artbook", "trailer", 
+                "movie", "beta", "ost", "original sound", "wallpaper", "art book", 
+                "season pass", "bonus content", "uncut", "spin-off", "spinoff", "costume", 
+                "hd", "technique", "sneakers", "pre-purchase", "pre-order", "pre-orders",
+                "expansion", "upgrade", "additional", "perks", "gesture","guide", "manual",
+                "jingle", "ce", "playtest", "special weapon", "danbo head", "making weapon",
+                "outfit", "dress", "bonus stamp", "add-on", "debundle", "the great ninja war",
+                "training set", "cd key", "key", "code", "gift", "gift code", "gift card",
+                "mac", "activation", "uplay activation", "ubisoft activation", "deluxe", "(SP)", "fields of elysium"
+            ].iter().any(|keyword| app_name_lower.contains(keyword));
+            
+            !is_non_game
+        }).cloned().collect();
         
         let total = matching_apps.len();
         let total_pages = (total as f64 / per_page as f64).ceil() as usize;
@@ -189,6 +228,12 @@ impl GameDatabase {
         } else {
             Vec::new()
         };
+        
+        // Only log pagination info in debug mode
+        if cfg!(debug_assertions) && page == 1 {
+            println!("Found {} total results, returning page {} of {} with {} items",
+                total, current_page, total_pages.max(1), page_items.len());
+        }
         
         SearchResults {
             games: page_items,

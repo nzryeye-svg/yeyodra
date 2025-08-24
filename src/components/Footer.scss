@@ -1,0 +1,38 @@
+@use "../scss/globals.scss" as globals;
+
+.footer {
+  background-color: globals.$dark-background-color;
+  border-top: 1px solid globals.$border-color;
+  padding: calc(globals.$spacing-unit * 1.5) calc(globals.$spacing-unit * 2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 40px;
+  font-size: globals.$small-font-size;
+  color: globals.$body-color;
+
+  &__left {
+    display: flex;
+    align-items: center;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+  }
+
+  &__status {
+    color: globals.$body-color;
+  }
+
+  &__version {
+    color: globals.$body-color;
+    font-family: monospace;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: calc(globals.$spacing-unit / 2);
+    text-align: center;
+  }
+}

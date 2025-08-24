@@ -1,4 +1,4 @@
-use crate::models::{SearchResults, AppSettings, RepoType};
+use crate::models::{SearchResults, AppSettings, RepoType, SteamAppDetailsResponse, SteamAppInfo};
 use crate::GAME_DATABASE;
 use std::collections::HashMap;
 use std::path::Path;
@@ -9,6 +9,7 @@ use tauri::{command, State};
 use uuid::Uuid;
 use walkdir::WalkDir;
 use zip::ZipArchive;
+use reqwest::Client;
 
 // Application state type
 type AppState = crate::AppState;
@@ -31,6 +32,53 @@ pub async fn search_games(query: String, page: usize, per_page: usize) -> Result
     // Perform search
     let results = GAME_DATABASE.search(&query, page, per_page);
     Ok(results)
+}
+
+// Command to get game details by AppID
+#[command]
+pub async fn get_game_details(app_id: String) -> Result<SteamAppInfo, String> {
+    println!("Fetching game details for AppID: {}", app_id);
+    
+    let client = Client::new();
+    let url = format!("https://store.steampowered.com/api/appdetails?appids={}", app_id);
+    
+    match client.get(&url)
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await {
+        Ok(response) => {
+            if !response.status().is_success() {
+                println!("Steam API returned non-success status: {}", response.status());
+                return Err(format!("Steam API returned status {}", response.status()));
+            }
+            
+            match response.json::<SteamAppDetailsResponse>().await {
+                Ok(app_details) => {
+                    if let Some(app_data) = app_details.apps.get(&app_id) {
+                        if app_data.success {
+                            if let Some(data) = &app_data.data {
+                                println!("Successfully fetched details for {}: {}", app_id, data.name);
+                                return Ok(data.clone());
+                            }
+                        }
+                    }
+                    let msg = format!("Steam API returned success=false or no data for AppID {}", app_id);
+                    println!("{}", msg);
+                    Err(msg)
+                },
+                Err(e) => {
+                    let msg = format!("Failed to parse Steam API response: {}", e);
+                    println!("{}", msg);
+                    Err(msg)
+                }
+            }
+        },
+        Err(e) => {
+            let msg = format!("Error fetching from Steam API: {}", e);
+            println!("{}", msg);
+            Err(msg)
+        }
+    }
 }
 
 #[command]
@@ -210,4 +258,26 @@ fn process_downloaded_zip(zip_path: &Path) -> Result<(), anyhow::Error> {
     println!("Temporary directory cleaned up");
     
     Ok(())
+}
+
+#[command]
+pub async fn get_batch_game_details(app_ids: Vec<String>) -> Result<Vec<crate::models::SteamAppInfo>, String> {
+    println!("Fetching batch game details for {} apps: {:?}", app_ids.len(), app_ids);
+    
+    let mut results = Vec::new();
+    
+    for app_id in app_ids {
+        match get_game_details(app_id.clone()).await {
+            Ok(details) => {
+                println!("Successfully fetched details for {}: {}", app_id, details.name);
+                results.push(details);
+            }
+            Err(e) => {
+                println!("Failed to fetch details for {}: {}", app_id, e);
+            }
+        }
+    }
+    
+    println!("Successfully fetched {} out of requested game details", results.len());
+    Ok(results)
 }

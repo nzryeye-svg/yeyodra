@@ -1,0 +1,373 @@
+@use "../scss/globals" as *;
+@use "sass:color";
+
+.game-detail-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: $background-color;
+  color: $text-color;
+
+
+
+  // Banner overlay and actions
+  &__banner {
+    position: relative;
+    height: 300px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    .banner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        to bottom, 
+        rgba(0, 0, 0, 0.1) 0%, 
+        rgba(0, 0, 0, 0.7) 100%
+      );
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 20px;
+    }
+    
+    .banner-actions {
+      display: flex;
+      gap: 8px;
+      
+      .banner-action-btn {
+        background-color: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(10px);
+        min-width: auto;
+        
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.85);
+          border-color: rgba(255, 255, 255, 0.3);
+          color: white;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
+          
+          &:hover {
+            transform: none;
+            box-shadow: none;
+          }
+        }
+        
+        .spinning {
+          animation: spin 1s linear infinite;
+        }
+        
+        // Specific button styles
+        &.update-btn {
+          &:hover {
+            background-color: rgba(59, 130, 246, 0.9);
+            border-color: #3b82f6;
+          }
+        }
+        
+        &.dlc-btn {
+          &:hover {
+            background-color: rgba(16, 185, 129, 0.9);
+            border-color: #10b981;
+          }
+        }
+        
+        &.remove-btn {
+          &:hover {
+            background-color: rgba(239, 68, 68, 0.9);
+            border-color: #ef4444;
+          }
+        }
+        
+        &.download-btn {
+          &:hover:not(:disabled) {
+            background-color: rgba(34, 197, 94, 0.9);
+            border-color: #22c55e;
+          }
+          
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            
+            &:hover {
+              transform: none;
+              box-shadow: none;
+            }
+          }
+        }
+        
+        // Hide text on smaller screens
+        @media (max-width: 768px) {
+          span {
+            display: none;
+          }
+          
+          padding: 8px;
+          min-width: 36px;
+          justify-content: center;
+        }
+      }
+    }
+    
+    .banner-placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: $muted-color;
+      font-size: 4rem;
+    }
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    
+    .loading-container, .error-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: $muted-color;
+
+        .loading-spinner {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+    }
+  }
+
+        &__banner {
+        height: 350px;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        overflow: hidden;
+        
+        // Fallback for when image fails to load
+        background-color: $dark-background-color;
+    
+    .banner-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: $dark-background-color;
+        font-size: 4rem;
+        color: $muted-color;
+    }
+
+    .banner-overlay {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: linear-gradient(to top, rgba(30, 30, 30, 0.9) 10%, rgba(30, 30, 30, 0) 70%);
+      display: flex;
+      align-items: flex-end;
+      padding: 2rem;
+    }
+
+
+  }
+
+  &__main {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+  }
+
+  &__left-col, &__right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+// Component styles that can be used outside game-detail-page
+.info-block {
+    background-color: $dark-background-color;
+    padding: 1.5rem;
+    border-radius: 8px;
+
+    p {
+        margin: 0;
+        color: $muted-color;
+        line-height: 1.5;
+    }
+    
+    &.meta-block p {
+        margin-bottom: 0.5rem;
+    }
+}
+
+.description-block {
+    p {
+        color: $text-color;
+    }
+}
+
+.about-game-block {
+    h3 {
+        margin: 0 0 1rem 0;
+        color: $text-color;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    p, div {
+        color: $text-color;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+    
+    // Handle HTML content from Steam API
+    h1, h2, h3, h4, h5, h6 {
+        color: $text-color;
+        margin: 1rem 0 0.5rem 0;
+    }
+    
+    ul, ol {
+        color: $text-color;
+        padding-left: 1.5rem;
+    }
+    
+    a {
+        color: $accent-color;
+        text-decoration: none;
+        
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+.media-block {
+    .screenshots-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+        
+        .screenshot-item {
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+            
+            &:hover {
+                transform: scale(1.05);
+            }
+            
+            .screenshot-image {
+                width: 100%;
+                height: 80px;
+                object-fit: cover;
+                border-radius: 4px;
+            }
+        }
+    }
+    
+    .screenshots-placeholder {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+        .screenshot {
+            height: 80px;
+            background-color: $body-color;
+            border-radius: 4px;
+        }
+    }
+}
+
+.collapsible-section {
+    background-color: $dark-background-color;
+    border-radius: 8px;
+    padding: 1.5rem;
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        margin-bottom: 1rem;
+        h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+    }
+    .section-content {
+        color: $muted-color;
+    }
+}
+
+.achievements-locked {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1rem 0;
+    
+    svg {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+}
+
+.stats-content, .hltb-content {
+    .stat-item, .hltb-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        p {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+        
+        p:first-child {
+            color: $text-color;
+        }
+    }
+}
+
+// Keyframes for spinning animation
+@keyframes spin {
+  from { 
+    transform: rotate(0deg); 
+  }
+  to { 
+    transform: rotate(360deg); 
+  }
+}

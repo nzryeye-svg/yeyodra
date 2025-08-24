@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Game information structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,3 +60,50 @@ pub struct SteamAppListEntry {
 
 // Download result type
 pub type DownloadResult = Result<bool, String>;
+
+// Steam API response structures
+#[derive(Debug, Deserialize)]
+pub struct SteamAppDetailsResponse {
+    #[serde(flatten)]
+    pub apps: HashMap<String, SteamAppData>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SteamAppData {
+    pub success: bool,
+    pub data: Option<SteamAppInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReleaseDateInfo {
+    pub coming_soon: bool,
+    pub date: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SteamAppInfo {
+    pub name: String,
+    pub steam_appid: u64,
+    pub header_image: String,
+    #[serde(default)]
+    pub publishers: Vec<String>,
+    #[serde(default)]
+    pub developers: Vec<String>,
+    pub release_date: ReleaseDateInfo,
+    pub short_description: String,
+    #[serde(default)]
+    pub about_the_game: Option<String>,
+    #[serde(default)]
+    pub screenshots: Vec<Screenshot>,
+    #[serde(default)]
+    pub drm_notice: Option<String>,
+    #[serde(default)]
+    pub dlc: Vec<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Screenshot {
+    pub id: u64,
+    pub path_thumbnail: String,
+    pub path_full: String,
+}

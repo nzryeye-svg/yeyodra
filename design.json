@@ -1,0 +1,81 @@
+{
+    "app": "Yeyodra",
+    "theme": {
+      "mode": "dark",
+      "primaryColor": "#1e1e1e",
+      "textColor": "#ffffff",
+      "accentColor": "#ff5722"
+    },
+    "layout": {
+      "sidebar": {
+        "position": "left",
+        "width": "250px",
+        "background": "#121212",
+        "sections": [
+          {
+            "type": "auth",
+            "items": [
+              {
+                "icon": "user",
+                "label": "Sign in"
+              }
+            ]
+          },
+          {
+            "type": "navigation",
+            "items": [
+              { "icon": "home", "label": "Home" },
+              { "icon": "grid", "label": "Catalogue" },
+              { "icon": "download", "label": "Downloads" },
+              { "icon": "settings", "label": "Settings" }
+            ]
+          },
+          {
+            "type": "library",
+            "label": "My Library",
+            "filter": true,
+            "items": [
+              {
+                "icon": "gamepad",
+                "label": "PEAK"
+              }
+            ]
+          }
+        ]
+      },
+      "header": {
+        "title": "Home",
+        "search": {
+          "placeholder": "Search games",
+          "position": "right"
+        }
+      },
+      "content": {
+        "featured": {
+          "title": "ELDEN RING NIGHTREIGN",
+          "description": "A standalone adventure within the ELDEN RING universe, crafted to offer players a new gaming experience by reimagining the game’s core design.",
+          "image": "elden-ring-banner.jpg"
+        },
+        "categories": {
+          "buttons": [
+            { "label": "Hot now", "icon": "🔥" },
+            { "label": "Top games of the week", "icon": "📊" },
+            { "label": "Games to beat", "icon": "🏆" }
+          ],
+          "extraButton": { "label": "Surprise me", "icon": "✨" }
+        },
+        "cards": [
+          {
+            "title": "Hollow Knight",
+            "image": "hollow-knight.jpg",
+            "description": "A challenging 2D action-adventure set in a vast ruined kingdom of insects and heroes."
+          }
+        ]
+      }
+    },
+    "footer": {
+      "left": "No downloads in progress",
+      "right": "v3.6.3 \"Lumen\""
+    }
+  }
+  
