@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { 
-  FaSignInAlt, FaHome, FaThLarge, FaDownload, FaCog, FaGamepad, FaFilter 
+  FaSignInAlt, FaHome, FaThLarge, FaCog, FaGamepad, FaFilter, FaWifi, FaShieldAlt 
 } from 'react-icons/fa';
 import { IoReloadCircleOutline } from 'react-icons/io5';
 import { FiRefreshCw } from 'react-icons/fi';
@@ -24,7 +24,8 @@ export function Sidebar({ activeTab, selectedLibraryGame, onTabChange, showNotif
   const navigationItems = [
     { key: 'home', label: 'Home', icon: <FaHome /> },
     { key: 'catalogue', label: 'Catalogue', icon: <FaThLarge /> },
-    { key: 'downloads', label: 'My Library', icon: <FaDownload /> },
+    { key: 'bypass', label: 'Bypass', icon: <FaShieldAlt /> },
+    { key: 'offline', label: 'Offline Setup', icon: <FaWifi /> },
     { key: 'settings', label: 'Settings', icon: <FaCog /> },
   ];
 

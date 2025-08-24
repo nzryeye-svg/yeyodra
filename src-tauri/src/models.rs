@@ -22,18 +22,19 @@ pub struct SearchResults {
 // Application settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
-    pub download_directory: String,
+    pub keep_temporary_files: bool,
+    pub bypass_download_directory: String,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
-        // Use user's Documents folder as default download directory
-        let default_dir = dirs_next::document_dir()
-            .map(|path| path.join("Yeyodra Downloads").to_string_lossy().to_string())
+        let bypass_dir = dirs_next::download_dir()
+            .map(|path| path.to_string_lossy().to_string())
             .unwrap_or_else(|| "downloads".to_string());
             
         Self {
-            download_directory: default_dir,
+            keep_temporary_files: false,
+            bypass_download_directory: bypass_dir,
         }
     }
 }

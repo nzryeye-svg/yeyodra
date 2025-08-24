@@ -6,6 +6,9 @@ import { GameCard } from './components/GameCard';
 import GameDetails from './components/GameDetails';
 import { Featured } from './components/Featured';
 import { CategoryButtons } from './components/CategoryButtons';
+import { OfflineSetup } from './components/OfflineSetup';
+import { Bypass } from './components/Bypass';
+import { Settings } from './components/Settings';
 
 import NotificationSystem from './components/NotificationSystem';
 import useNotification from './hooks/useNotification';
@@ -182,8 +185,11 @@ function App() {
       case 'catalogue':
         // Show game name when viewing game details, otherwise show "Catalogue"
         return selectedGame ? selectedGame.game_name : 'Catalogue';
-      case 'downloads':
-        return 'My Library';
+
+      case 'bypass':
+        return 'Bypass Tools';
+      case 'offline':
+        return 'Offline Setup';
       case 'settings':
         return 'Settings';
       case 'peak':
@@ -323,22 +329,27 @@ function App() {
               </div>
             )}
 
-            {/* My Library Tab */}
-            {activeTab === 'downloads' && (
-              <div className="placeholder-container">
-                <div className="placeholder-icon">📚</div>
-                <h3>My Library</h3>
-                <p>Select a game from the sidebar to view details</p>
-              </div>
+
+
+            {/* Bypass Tab */}
+            {activeTab === 'bypass' && (
+              <Bypass 
+                showNotification={{ showSuccess, showError, showWarning, showInfo }}
+              />
+            )}
+
+            {/* Offline Setup Tab */}
+            {activeTab === 'offline' && (
+              <OfflineSetup 
+                showNotification={{ showSuccess, showError, showWarning, showInfo }}
+              />
             )}
 
             {/* Settings Tab */}
             {activeTab === 'settings' && (
-              <div className="placeholder-container">
-                <div className="placeholder-icon">⚙️</div>
-                <h3>Settings</h3>
-                <p>Settings panel will be implemented soon</p>
-              </div>
+              <Settings 
+                showNotification={{ showSuccess, showError, showWarning, showInfo }}
+              />
             )}
 
             {/* PEAK Tab - Library Game Details */}
