@@ -328,6 +328,43 @@
     font-size: 0.85rem;
   }
 
+  &__bottom {
+    padding: calc(globals.$spacing-unit * 1.5);
+    border-top: 1px solid rgba(globals.$border-color, 0.5);
+    margin-top: auto;
+  }
+
+  &__restart-steam-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(globals.$spacing-unit / 2);
+    padding: calc(globals.$spacing-unit * 1.5) calc(globals.$spacing-unit * 2);
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: linear-gradient(135deg, #b91c1c, #991b1b);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  &__restart-icon {
+    font-size: 16px;
+  }
+
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

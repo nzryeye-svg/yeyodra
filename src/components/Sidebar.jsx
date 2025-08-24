@@ -4,6 +4,7 @@ import {
   FaSignInAlt, FaHome, FaThLarge, FaDownload, FaCog, FaGamepad, FaFilter 
 } from 'react-icons/fa';
 import { IoReloadCircleOutline } from 'react-icons/io5';
+import { FiRefreshCw } from 'react-icons/fi';
 import './Sidebar.scss';
 
 const SIDEBAR_MIN_WIDTH = 200;
@@ -12,7 +13,7 @@ const SIDEBAR_MAX_WIDTH = 450;
 
 const initialSidebarWidth = localStorage.getItem('sidebarWidth');
 
-export function Sidebar({ activeTab, selectedLibraryGame, onTabChange }) {
+export function Sidebar({ activeTab, selectedLibraryGame, onTabChange, showNotification }) {
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(250);
   const [libraryGames, setLibraryGames] = useState([]);
@@ -69,6 +70,20 @@ export function Sidebar({ activeTab, selectedLibraryGame, onTabChange }) {
 
   const handleRefreshLibrary = () => {
     loadLibraryGames();
+  };
+
+  const handleRestartSteam = async () => {
+    try {
+      await invoke('restart_steam');
+      if (showNotification) {
+        showNotification.showSuccess('Steam has been restarted successfully');
+      }
+    } catch (error) {
+      console.error('Error restarting Steam:', error);
+      if (showNotification) {
+        showNotification.showError(`Failed to restart Steam: ${error}`);
+      }
+    }
   };
 
   const handleLibraryGameClick = (game) => {
@@ -220,6 +235,18 @@ export function Sidebar({ activeTab, selectedLibraryGame, onTabChange }) {
               )}
             </ul>
           </section>
+        </div>
+        
+        {/* Bottom Section - Restart Steam Button */}
+        <div className="sidebar__bottom">
+          <button 
+            className="sidebar__restart-steam-button"
+            onClick={handleRestartSteam}
+            title="Restart Steam"
+          >
+            <FiRefreshCw className="sidebar__restart-icon" />
+            <span>Restart Steam</span>
+          </button>
         </div>
       </div>
 

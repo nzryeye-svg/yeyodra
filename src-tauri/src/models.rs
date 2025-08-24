@@ -27,8 +27,13 @@ pub struct AppSettings {
 
 impl Default for AppSettings {
     fn default() -> Self {
+        // Use user's Documents folder as default download directory
+        let default_dir = dirs_next::document_dir()
+            .map(|path| path.join("Yeyodra Downloads").to_string_lossy().to_string())
+            .unwrap_or_else(|| "downloads".to_string());
+            
         Self {
-            download_directory: "downloads".to_string(),
+            download_directory: default_dir,
         }
     }
 }

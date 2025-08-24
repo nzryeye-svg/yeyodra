@@ -137,7 +137,7 @@ pub async fn get_library_games() -> Result<Vec<LibraryGameInfo>, String> {
 }
 
 /// Helper to find Steam config path (copied from Oracle)
-fn find_steam_config_path() -> Result<PathBuf, String> {
+pub fn find_steam_config_path() -> Result<PathBuf, String> {
     // For Windows
     #[cfg(target_os = "windows")]
     {
@@ -320,7 +320,7 @@ async fn background_refresh_cache(app_ids: Vec<String>) {
             println!("Background refreshing cache for AppID: {}", app_id);
             
             // Try to fetch and cache from Steam API
-            if let Ok(details) = crate::commands::get_game_details(app_id.clone()).await {
+            if let Ok(_details) = crate::commands::get_game_details(app_id.clone()).await {
                 println!("Successfully refreshed cache for AppID: {}", app_id);
             } else {
                 println!("Failed to refresh cache for AppID: {}", app_id);

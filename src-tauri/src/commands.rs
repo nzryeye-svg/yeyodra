@@ -11,6 +11,8 @@ use walkdir::WalkDir;
 use zip::ZipArchive;
 use reqwest::Client;
 use std::path::PathBuf;
+use crate::library::find_steam_config_path;
+use std::process::Command;
 
 // Application state type
 type AppState = crate::AppState;
@@ -160,7 +162,7 @@ pub async fn download_game(app_id: String, game_name: String, output_dir: Option
                             println!("SUCCESS! Branch repo saved to: {}", zip_path.display());
                             
                             // Process the downloaded ZIP file
-                            process_downloaded_zip(&zip_path).map_err(|e| e.to_string())?;
+                            process_downloaded_zip(&zip_path, &download_dir).map_err(|e| e.to_string())?;
                             
                             return Ok(true);
                         } else {
@@ -193,7 +195,7 @@ pub async fn save_settings(settings: AppSettings, state: State<'_, AppState>) ->
 }
 
 // Helper function to process downloaded ZIP files
-fn process_downloaded_zip(zip_path: &Path) -> Result<(), anyhow::Error> {
+fn process_downloaded_zip(zip_path: &Path, fallback_dir: &str) -> Result<(), anyhow::Error> {
     println!("Processing downloaded ZIP file: {}", zip_path.display());
     
     // Create temporary directory for extraction
@@ -225,16 +227,29 @@ fn process_downloaded_zip(zip_path: &Path) -> Result<(), anyhow::Error> {
     
     println!("Extracted {} files to temporary directory", archive.len());
     
-    // Define target directories (Windows Steam paths)
-    let steam_config_base = Path::new("C:\\Program Files (x86)\\Steam\\config");
+    // Try to find Steam config directory, fallback to downloads folder
+    let steam_config_base = match find_steam_config_path() {
+        Ok(path) => path,
+        Err(_) => {
+            println!("Steam config not found, using download directory");
+            PathBuf::from(fallback_dir).join("steam_files")
+        }
+    };
+    
     let stplugin_dir = steam_config_base.join("stplug-in");
     let depotcache_dir = steam_config_base.join("depotcache");
     let statsexport_dir = steam_config_base.join("StatsExport");
     
-    // Try to create target directories (might fail if Steam not installed)
-    let _ = fs::create_dir_all(&stplugin_dir);
-    let _ = fs::create_dir_all(&depotcache_dir);
-    let _ = fs::create_dir_all(&statsexport_dir);
+    // Create target directories with proper error handling
+    fs::create_dir_all(&stplugin_dir).map_err(|e| {
+        println!("Warning: Could not create stplug-in directory: {}", e);
+    }).ok();
+    fs::create_dir_all(&depotcache_dir).map_err(|e| {
+        println!("Warning: Could not create depotcache directory: {}", e);
+    }).ok();
+    fs::create_dir_all(&statsexport_dir).map_err(|e| {
+        println!("Warning: Could not create StatsExport directory: {}", e);
+    }).ok();
     
     // Count moved files
     let mut lua_count = 0;
@@ -251,23 +266,41 @@ fn process_downloaded_zip(zip_path: &Path) -> Result<(), anyhow::Error> {
             // Process based on file extension/name
             if let Some(ext) = path.extension() {
                 if ext == "lua" {
-                    if let Ok(_) = fs::copy(path, stplugin_dir.join(path.file_name().unwrap_or_default())) {
-                        lua_count += 1;
-                        println!("Moved LUA file to stplug-in: {}", file_name);
+                    let target_path = stplugin_dir.join(path.file_name().unwrap_or_default());
+                    match fs::copy(path, &target_path) {
+                        Ok(_) => {
+                            lua_count += 1;
+                            println!("Moved LUA file to stplug-in: {}", file_name);
+                        }
+                        Err(e) => {
+                            println!("Warning: Failed to copy LUA file {}: {}", file_name, e);
+                        }
                     }
                 } else if ext == "bin" {
-                    if let Ok(_) = fs::copy(path, statsexport_dir.join(path.file_name().unwrap_or_default())) {
-                        bin_count += 1;
-                        println!("Moved BIN file to StatsExport: {}", file_name);
+                    let target_path = statsexport_dir.join(path.file_name().unwrap_or_default());
+                    match fs::copy(path, &target_path) {
+                        Ok(_) => {
+                            bin_count += 1;
+                            println!("Moved BIN file to StatsExport: {}", file_name);
+                        }
+                        Err(e) => {
+                            println!("Warning: Failed to copy BIN file {}: {}", file_name, e);
+                        }
                     }
                 }
             }
             
             // Check for manifest files
             if file_name.to_lowercase().contains("manifest") {
-                if let Ok(_) = fs::copy(path, depotcache_dir.join(path.file_name().unwrap_or_default())) {
-                    manifest_count += 1;
-                    println!("Moved manifest file to depotcache: {}", file_name);
+                let target_path = depotcache_dir.join(path.file_name().unwrap_or_default());
+                match fs::copy(path, &target_path) {
+                    Ok(_) => {
+                        manifest_count += 1;
+                        println!("Moved manifest file to depotcache: {}", file_name);
+                    }
+                    Err(e) => {
+                        println!("Warning: Failed to copy manifest file {}: {}", file_name, e);
+                    }
                 }
             }
         }
@@ -363,5 +396,60 @@ fn save_steam_app_info_to_cache(app_id: &str, steam_app_info: &SteamAppInfo) -> 
     let content = serde_json::to_string_pretty(steam_app_info).map_err(|e| e.to_string())?;
     std::fs::write(&cache_path, content).map_err(|e| e.to_string())?;
     println!("Cached Steam app info for AppID {}", app_id);
+    Ok(())
+}
+
+// Command to restart Steam
+#[command]
+pub async fn restart_steam() -> Result<(), String> {
+    println!("Attempting to restart Steam...");
+    
+    // On Windows
+    #[cfg(target_os = "windows")]
+    {
+        // First, try to close Steam
+        let _ = Command::new("taskkill")
+            .args(["/F", "/IM", "steam.exe"])
+            .output();
+        
+        // Wait a moment for Steam to close
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        
+        // Try to find Steam installation path
+        let steam_path = "C:\\Program Files (x86)\\Steam\\steam.exe";
+        if std::path::Path::new(steam_path).exists() {
+            // Relaunch Steam
+            Command::new(steam_path)
+                .spawn()
+                .map_err(|e| format!("Failed to restart Steam: {}", e))?;
+        } else {
+            // Fallback: try from Program Files
+            let alt_steam_path = "C:\\Program Files\\Steam\\steam.exe";
+            if std::path::Path::new(alt_steam_path).exists() {
+                Command::new(alt_steam_path)
+                    .spawn()
+                    .map_err(|e| format!("Failed to restart Steam: {}", e))?;
+            } else {
+                return Err("Steam installation not found".to_string());
+            }
+        }
+    }
+    
+    // On Linux/macOS
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Kill Steam process
+        let _ = Command::new("pkill").arg("steam").output();
+        
+        // Wait a moment
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        
+        // Restart Steam
+        Command::new("steam")
+            .spawn()
+            .map_err(|e| format!("Failed to restart Steam: {}", e))?;
+    }
+    
+    println!("Steam restarted successfully.");
     Ok(())
 }

@@ -6,7 +6,7 @@ import { GameCard } from './components/GameCard';
 import GameDetails from './components/GameDetails';
 import { Featured } from './components/Featured';
 import { CategoryButtons } from './components/CategoryButtons';
-import { Footer } from './components/Footer';
+
 import NotificationSystem from './components/NotificationSystem';
 import useNotification from './hooks/useNotification';
 
@@ -205,7 +205,8 @@ function App() {
             if (gameData) {
               setSelectedLibraryGame(gameData);
             }
-          }} 
+          }}
+          showNotification={{ showSuccess, showError, showWarning, showInfo }}
         />
         
         <div className="app-container">
@@ -229,7 +230,6 @@ function App() {
             {/* Home Tab */}
             {activeTab === 'home' && (
               <div className="home-container">
-                <h2 className="page-title">Featured</h2>
                 <Featured 
                   featuredGame={featuredGames.length > 0 ? featuredGames[0] : null}
                   isLoading={isLoadingFeatured}
@@ -361,11 +361,6 @@ function App() {
           </section>
         </div>
       </main>
-      
-      <Footer 
-        downloadStatus="No downloads in progress" 
-        version='v0.1.0 "Yeyodra"' 
-      />
       
       {/* Notification System */}
       <NotificationSystem

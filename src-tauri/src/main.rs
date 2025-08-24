@@ -49,6 +49,7 @@ fn main() {
             get_settings,
             save_settings,
             get_batch_game_details,
+            restart_steam,
             // Library management from library.rs
             check_steam_directories,
             library::get_library_games,
