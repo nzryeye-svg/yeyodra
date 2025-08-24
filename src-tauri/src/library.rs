@@ -99,8 +99,8 @@ pub async fn get_library_games() -> Result<Vec<LibraryGameInfo>, String> {
                             .map(|game| game.game_name)
                             .unwrap_or_else(|| format!("AppID: {}", app_id));
                         
-                        // Fetch images from Steam API
-                        let (capsule_image, header_image) = fetch_game_images(&app_id).await;
+                        // Get images from cached game details (reuse existing cache system)
+                        let (capsule_image, header_image) = get_images_from_cached_details(&app_id).await;
                         
                         games.push(LibraryGameInfo {
                             app_id,
@@ -213,7 +213,75 @@ fn find_lua_file_for_appid(steam_config_path: &Path, app_id_to_find: &str) -> Re
     Err(format!("Could not find a .lua file for AppID: {}", app_id_to_find))
 }
 
-/// Fetch game images from Steam API with fallback to CDN
+/// Get game images from cached game details or fetch if needed
+async fn get_images_from_cached_details(app_id: &str) -> (Option<String>, Option<String>) {
+    // Try to load from the same cache system used by get_game_details
+    if let Ok(cached_data) = load_steam_app_info_from_cache(app_id) {
+        println!("Loaded images for AppID {} from cached Steam data", app_id);
+        
+        // Use cached header_image if not empty, otherwise fallback to CDN
+        let header_image = if cached_data.header_image.is_empty() {
+            format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg", app_id)
+        } else {
+            cached_data.header_image.clone()
+        };
+        let capsule_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/capsule_231x87.jpg", app_id);
+        
+        return (Some(capsule_image), Some(header_image));
+    }
+    
+    // If no cache, fetch from Steam API once and cache it
+    println!("No cache found for AppID {}, fetching from Steam API and caching", app_id);
+    match try_fetch_from_steam_api(app_id).await {
+        (Some(capsule), Some(header)) => {
+            println!("Successfully fetched and will cache images for AppID {}", app_id);
+            (Some(capsule), Some(header))
+        }
+        _ => {
+            println!("Steam API failed for AppID {}, using CDN fallback", app_id);
+            let capsule_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/capsule_231x87.jpg", app_id);
+            let header_image = format!("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/header.jpg", app_id);
+            (Some(capsule_image), Some(header_image))
+        }
+    }
+}
+
+// Helper function to load from the same cache used by commands.rs
+fn load_steam_app_info_from_cache(app_id: &str) -> Result<crate::models::SteamAppInfo, String> {
+    let cache_path = get_steam_cache_file_path(app_id)?;
+    
+    if cache_path.exists() && is_steam_cache_valid(&cache_path) {
+        let content = std::fs::read_to_string(&cache_path).map_err(|e| e.to_string())?;
+        let steam_app_info: crate::models::SteamAppInfo = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        Ok(steam_app_info)
+    } else {
+        Err("Cache not found or expired".to_string())
+    }
+}
+
+fn get_steam_cache_file_path(app_id: &str) -> Result<std::path::PathBuf, String> {
+    if let Some(cache_dir) = dirs_next::cache_dir() {
+        let yeyodra_cache = cache_dir.join("yeyodra").join("steam_app_info");
+        std::fs::create_dir_all(&yeyodra_cache).map_err(|e| e.to_string())?;
+        Ok(yeyodra_cache.join(format!("{}.json", app_id)))
+    } else {
+        Err("Unable to find cache directory".to_string())
+    }
+}
+
+fn is_steam_cache_valid(file_path: &std::path::PathBuf) -> bool {
+    if let Ok(metadata) = std::fs::metadata(file_path) {
+        if let Ok(modified) = metadata.modified() {
+            if let Ok(duration) = modified.elapsed() {
+                // Cache is valid for 24 hours
+                return duration.as_secs() < 24 * 60 * 60;
+            }
+        }
+    }
+    false
+}
+
+/// Fetch game images from Steam API with fallback to CDN (kept for compatibility)
 async fn fetch_game_images(app_id: &str) -> (Option<String>, Option<String>) {
     // First try Steam API with isolated client and short timeout
     let api_result = try_fetch_from_steam_api(app_id).await;

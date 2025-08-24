@@ -21,6 +21,8 @@ function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [showingDetails, setShowingDetails] = useState(false);
   const [selectedLibraryGame, setSelectedLibraryGame] = useState(null);
+  const [featuredGames, setFeaturedGames] = useState([]);
+  const [isLoadingFeatured, setIsLoadingFeatured] = useState(false);
   
   // Notification system
   const {
@@ -55,6 +57,44 @@ function App() {
       setIsLoading(false);
     }
   };
+
+  // Fetch featured games for home page
+  const fetchFeaturedGames = async () => {
+    setIsLoadingFeatured(true);
+    setError('');
+    try {
+      // Featured AppIDs as requested
+      const featuredAppIds = ['2622380', '2322010'];
+      const gamesData = [];
+      
+      for (const appId of featuredAppIds) {
+        try {
+          const gameDetails = await invoke('get_game_details', { appId });
+          // Convert to GameCard format
+          const gameCardData = {
+            app_id: appId,
+            game_name: gameDetails.name,
+            icon_url: gameDetails.header_image,
+            short_description: gameDetails.short_description,
+          };
+          gamesData.push(gameCardData);
+        } catch (err) {
+          console.error(`Failed to fetch game ${appId}:`, err);
+        }
+      }
+      
+      setFeaturedGames(gamesData);
+    } catch (err) {
+      setError(`Failed to load featured games: ${err}`);
+    } finally {
+      setIsLoadingFeatured(false);
+    }
+  };
+
+  // Load featured games on component mount
+  useEffect(() => {
+    fetchFeaturedGames();
+  }, []);
 
   const handleDownload = async (game) => {
     try {
@@ -106,6 +146,12 @@ function App() {
   const handleBackFromDetails = () => {
     setShowingDetails(false);
     setSelectedGame(null);
+  };
+
+  // Handler for featured game cards
+  const handleFeaturedGameClick = (game) => {
+    setActiveTab('catalogue'); // Switch to catalogue tab
+    handleShowDetails(game);
   };
 
   const handleBackFromLibraryDetails = () => {
@@ -193,12 +239,28 @@ function App() {
                 <div className="game-section">
                   <h2 className="section-title">🔥 Hot now</h2>
                   <div className="game-grid">
-                    {/* Placeholder cards */}
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="game-card-placeholder">
-                        Sample Game {i}
+                    {isLoadingFeatured && (
+                      <div className="loading-container">
+                        <span className="loading-spinner"></span>
+                        <p>Loading featured games...</p>
                       </div>
-                    ))}
+                    )}
+                    
+                    {!isLoadingFeatured && featuredGames.length > 0 && (
+                      featuredGames.map((game) => (
+                        <GameCard
+                          key={game.app_id}
+                          game={game}
+                          onShowDetails={handleFeaturedGameClick}
+                        />
+                      ))
+                    )}
+
+                    {!isLoadingFeatured && featuredGames.length === 0 && (
+                      <div className="placeholder-container">
+                        <p>No featured games available</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
