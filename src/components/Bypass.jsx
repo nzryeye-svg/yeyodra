@@ -32,17 +32,105 @@ export function Bypass({ showNotification }) {
   // Game AppIDs with their bypass URLs
   const gameBypassData = [
     {
-      appId: '582160',
+      appId: '2622380', // Elden ring nightreign
+      bypassUrl: 'https://drive.google.com/file/d/1ZN1yfI5wmuvPWP9vv1HJ3NghJ-7vEhH3/view'
+    },
+    {
+      appId: '3240220', // Grand Theft Auto V Enhanced
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1389990820903387257/1397450870303490191/GTA_V_Enhanced_Fix.7z?ex=68ac9dca&is=68ab4c4a&hm=af5e559917dc5117fdc5879f744d265c3d1ab670a44743217db1e2ac6ca4118b&'
+    },
+    {
+      appId: '1547000', // Grand Theft Auto San Andreas Definitive
+      bypassUrl: 'https://drive.google.com/file/d/1X-pF6ZcICKEQct_mguOCKRrX8ic31CmE/view'
+    },
+    {
+      appId: '1546970', // Grand Theft Auto III - The Definitive Edition
+      bypassUrl: 'https://drive.google.com/file/d/1XKZ4oCYdBKQ9_g6KnKoSaBqBoEA50xmg/view'
+    },
+    {
+      appId: '1546990', // Grand Theft Auto Vice City Definitive
+      bypassUrl: 'https://drive.google.com/file/d/1X7Lty9v7ubJ8zUXgrXosIR2hNRWkLJeu/view'
+    },
+    {
+      appId: '582160', // Assassins Creed Origins
       bypassUrl: 'https://cdn.discordapp.com/attachments/1390024381463531540/1404222172892758016/Assassins_Creed_-_Origins_FIX.zip?ex=68ac338f&is=68aae20f&hm=773b95fd1f1ae0fc434b239f2fe23574d7b8481ed43798e7220e307a843ca754&'
     },
     {
-      appId: '2208920',
+      appId: '2208920', // Assassins Creed Valhalla
       bypassUrl: 'https://cdn.discordapp.com/attachments/1390024010758361240/1404019856348807260/Assassins_Creed_Valhalla_fix.zip?ex=68ac1fe3&is=68aace63&hm=a2b14cd239bf36af558c0799b5942ae46607faaca316c1b2a0e2df39c4e51d05&'
+    },
+    {
+      appId: '3035570', // Assassins Creed Mirage
+      bypassUrl: 'https://drive.google.com/file/d/1lI3UrrHXqwqwLkeByN2BukbNHl_sNmaQ/view'
+    },
+    {
+      appId: '812140', // Assassins Creed Odyssey
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1390024754827624528/1404350073873109042/Assassins_Creed_Odyssey_Fix_Empress.zip?ex=68acaaad&is=68ab592d&hm=6214cedd6b11a18170f09d93e2feb9925834ac16a8872a930f66fb38ee8dd1b6&'
+    },
+    {
+      appId: '311560', // Assassin's Creed Rogue
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1390020111745945792/1390020112676819045/AC_Rouge.zip?ex=68ac9c1c&is=68ab4a9c&hm=1c32b1d5cfaa9f9e22d357b9324b985e8dc6862a51cec43404770709dc17e2d0&'
     },
     {
       appId: '2239550', // Watch Dogs: Legion
       bypassUrl: 'https://drive.google.com/file/d/1BU-DS2j0Uo3TG9xOmJyEqqXly1dACIrc/view?pli=1'
-    }
+    },
+    {
+      appId: '447040', // Watch Dogs 2
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1389476637506015364/1404643658468163644/Watch_Dogs_2_FIX.zip?ex=68ad1359&is=68abc1d9&hm=1af08fa0ae015efc9808b6e7ccbe0db2ccb40d08107eeef4568a0343bf2e71f3&'
+    },
+    {
+      appId: '243470', // Watch Dogs
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1389475358436495480/1389475358943875222/Watch_Dogs_FIX.zip?ex=68ac9b04&is=68ab4984&hm=0d6f15d7f681a9a9fbeb9f585c289c042a193dc7081024e8a0cfa90ea6ad2128&'
+    },
+    {
+      appId: '637650', // FINAL FANTASY XV WINDOWS EDITION
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1401413616120627251/1401413621250265108/Final_Fantasy_xv_Windows_Edition_episode_ardyn_fix_codex.rar?ex=68ac87e4&is=68ab3664&hm=6ac5d1cc5e41f883377c87a0a0d3302df84c469294cd85037ee71fe3b28ca310&'
+    },
+    {
+      appId: '2050650', // Resident Evil 4
+      bypassUrl: 'https://drive.google.com/file/d/1qKe_NRFRz8RbQ3y3w2V5-D5HQyHO6q2A/edit'
+    },
+    {
+      appId: '1235140', // Yakuza: Like a Dragon
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1399054772224393237/1399054777027133573/Yakuza_Like_A_Dragon_Fix_Empress.rar?ex=68ad2d8c&is=68abdc0c&hm=a6e172e4fc705b735ec9a9e551e887a880af768aadd698441f0d5d87b729df9f&'
+    },
+    {
+      appId: '208650', // Batman™: Arkham Knight
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1399549307014746244/1399549308952379456/BatmanTM_Arkham_Knight_Fix_cpy.zip?ex=68acffdd&is=68abae5d&hm=7740e302ba8dddcfefb6dc7c89406f02e08dc9ae74e8cd1aee0bc162deb79c3a&'
+    },
+    {
+      appId: '2668510', // Red Dead Redemption
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1389990240042881055/1399392110687289455/Red_Dead_Redemption_Fix_Razor.zip?ex=68ad1636&is=68abc4b6&hm=67bfef3e4f2cc42434ffd30facdc5eaf0efeb4ed357913946e2ecbb3b657cf69&'
+    },
+    {
+      appId: '438490', // God Eater 2 Rage Burst
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1399013410963984487/1399013413627236372/God_Eater_2_Rage_Burst_Steamworks_Fix_Revolt.zip?ex=68ad0706&is=68abb586&hm=4bbee9d1d3380d62f5512dd69b94d04d21fc8c64b0e3673e5523f1f32d72990d&'
+    },
+    {
+      appId: '1222690', // Dragon Age™ Inquisition
+      bypassUrl: 'https://drive.google.com/file/d/1rudSLo8OdtjhWNWt9puZzmc00iP4hjYn/view'
+    },
+    {
+      appId: '1259970', // eFootball PES 2021
+      bypassUrl: 'https://drive.google.com/file/d/1wUaBi1mVgtT1F7H6j2u6Llh6q0zInWj3/view'
+    },
+    {
+      appId: '1496790', // Gotham Knight
+      bypassUrl: 'https://drive.google.com/file/d/1_Pmfq424dEDPLGwL4yWX3S6jqnsP1C5j/view'
+    },
+    {
+      appId: '1774580', // Star Wars™ Battlefront™
+      bypassUrl: 'https://drive.google.com/file/d/1XVh84SbL4Ec_neIeP_auT3QnOnHsN-4U/view'
+    },
+    {
+      appId: '371660', // Far Cry Primal
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1389052005149970512/1389052005665738853/Farcry_primal.zip?ex=68ad0afd&is=68abb97d&hm=2cc33796f88281bc25aa78945a21eaab793888e1615919e499b2a8b042dad306&'
+    },
+    {
+      appId: '626690', // Sword Art Online Fatal Bullet 
+      bypassUrl: 'https://cdn.discordapp.com/attachments/1398355529922777309/1398355531076341830/Sword_art_online_fatal_bullet_dissonance_of_the_nexus_Fix_codex.zip?ex=68ac9c92&is=68ab4b12&hm=5b107ca6c506fb47ae4c9b0361792bb2fd35f4ccbab83222d80aa3da4b86124c&'
+    },
     // Add more games and their bypass URLs here
     // Supports: Discord CDN, Google Drive, GitHub Releases, MediaFire, MEGA
   ];
@@ -71,11 +159,23 @@ export function Bypass({ showNotification }) {
   const fetchGames = async () => {
     setIsLoadingGames(true);
     try {
-      const gamesData = [];
+      // Extract all app IDs for batch processing
+      const appIds = gameBypassData.map(data => data.appId);
       
-      for (const gameData of gameBypassData) {
-        try {
-          const gameDetails = await invoke('get_game_details', { appId: gameData.appId });
+      console.log(`Fetching ${appIds.length} bypass games using batch API...`);
+      
+      // Use batch API for better rate limiting
+      const gameDetailsArray = await invoke('get_batch_game_details', { appIds });
+      
+      // Map the results back to games with bypass URLs
+      const gamesData = [];
+      for (let i = 0; i < gameBypassData.length; i++) {
+        const gameData = gameBypassData[i];
+        const gameDetails = gameDetailsArray.find(details => 
+          details && details.steam_appid && details.steam_appid.toString() === gameData.appId
+        );
+        
+        if (gameDetails) {
           const game = {
             app_id: gameData.appId,
             name: gameDetails.name,
@@ -85,11 +185,22 @@ export function Bypass({ showNotification }) {
             hasBypass: true
           };
           gamesData.push(game);
-        } catch (err) {
-          console.error(`Failed to fetch game ${gameData.appId}:`, err);
+        } else {
+          console.warn(`No details found for game ${gameData.appId}`);
+          // Add placeholder for failed games
+          const game = {
+            app_id: gameData.appId,
+            name: `Game ${gameData.appId}`,
+            header_image: null,
+            short_description: 'Game details unavailable',
+            bypass_url: gameData.bypassUrl,
+            hasBypass: true
+          };
+          gamesData.push(game);
         }
       }
       
+      console.log(`Successfully loaded ${gamesData.length} bypass games`);
       setGames(gamesData);
     } catch (error) {
       console.error('Error fetching games:', error);

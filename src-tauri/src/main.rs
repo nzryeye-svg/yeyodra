@@ -5,6 +5,7 @@ mod commands;
 mod models;
 mod game_database;
 mod library;
+mod steam_api;
 
 use commands::*;
 use models::*;

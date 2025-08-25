@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use walkdir::WalkDir;
 use uuid::Uuid;
 use std::time::Duration;
+use crate::steam_api::{STEAM_API, ApiPriority};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DirectoryStatus {
@@ -305,37 +306,41 @@ fn is_cache_valid_for_app(app_id: &str) -> bool {
 
 /// Background function to refresh expired cache with rate limiting
 async fn background_refresh_cache(app_ids: Vec<String>) {
-    // Use semaphore for rate limiting (max 3 concurrent API calls)
-    let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(3));
-    let mut tasks = Vec::new();
+    println!("Starting background cache refresh for {} games", app_ids.len());
     
-    for app_id in app_ids {
-        let semaphore = semaphore.clone();
-        let task = tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.unwrap();
-            
-            // Add small delay between requests to be nice to Steam API
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-            
-            println!("Background refreshing cache for AppID: {}", app_id);
-            
-            // Try to fetch and cache from Steam API
-            if let Ok(_details) = crate::commands::get_game_details(app_id.clone()).await {
-                println!("Successfully refreshed cache for AppID: {}", app_id);
-            } else {
-                println!("Failed to refresh cache for AppID: {}", app_id);
+    // Use centralized Steam API with background priority
+    let results = STEAM_API.get_batch_game_details(app_ids.clone(), ApiPriority::Background).await;
+    
+    let mut success_count = 0;
+    let mut failure_count = 0;
+    
+    // Process results and cache successful ones
+    for (i, result) in results.into_iter().enumerate() {
+        if let Some(app_id) = app_ids.get(i) {
+            match result {
+                Ok(game_info) => {
+                    // Save to cache using the existing cache function
+                    if let Err(e) = crate::commands::save_steam_app_info_to_cache(app_id, &game_info) {
+                        println!("Failed to cache game details for {}: {}", app_id, e);
+                        failure_count += 1;
+                    } else {
+                        println!("Successfully refreshed cache for AppID: {}", app_id);
+                        success_count += 1;
+                    }
+                }
+                Err(e) => {
+                    println!("Failed to refresh cache for AppID {}: {}", app_id, e);
+                    failure_count += 1;
+                }
             }
-        });
-        
-        tasks.push(task);
+        }
     }
     
-    // Wait for all background tasks to complete
-    futures::future::join_all(tasks).await;
-    println!("Background cache refresh completed");
+    println!("Background cache refresh completed: {} success, {} failures", success_count, failure_count);
 }
 
-/// Fetch game images from Steam API with fallback to CDN (kept for compatibility)
+/// Fetch game images from Steam API with fallback to CDN (DEPRECATED - use centralized steam_api module)
+#[allow(dead_code)]
 async fn fetch_game_images(app_id: &str) -> (Option<String>, Option<String>) {
     // First try Steam API with isolated client and short timeout
     let api_result = try_fetch_from_steam_api(app_id).await;
@@ -356,7 +361,8 @@ async fn fetch_game_images(app_id: &str) -> (Option<String>, Option<String>) {
     }
 }
 
-/// Try to fetch from Steam API with proper error isolation
+/// Try to fetch from Steam API with proper error isolation (DEPRECATED - use centralized steam_api module)
+#[allow(dead_code)]
 async fn try_fetch_from_steam_api(app_id: &str) -> (Option<String>, Option<String>) {
     use std::time::Duration;
     

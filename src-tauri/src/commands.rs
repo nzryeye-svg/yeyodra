@@ -1,5 +1,6 @@
-use crate::models::{SearchResults, AppSettings, RepoType, SteamAppDetailsResponse, SteamAppInfo};
+use crate::models::{SearchResults, AppSettings, RepoType, SteamAppInfo};
 use crate::GAME_DATABASE;
+use crate::steam_api::{STEAM_API, ApiPriority};
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs::{self, File};
@@ -51,66 +52,16 @@ pub async fn get_game_details(app_id: String) -> Result<SteamAppInfo, String> {
         return Ok(cached_info);
     }
 
-    println!("Fetching game details for AppID: {}", app_id);
-    
-    // Create isolated client with shorter timeout to prevent cascade failures
-    let client = Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-        .unwrap_or_else(|_| Client::new());
-    
-    let url = format!("https://store.steampowered.com/api/appdetails?appids={}", app_id);
-    
-    // Use tokio timeout as additional protection
-    let response_result = tokio::time::timeout(
-        Duration::from_secs(8),
-        client.get(&url).send()
-    ).await;
-    
-    match response_result {
-        Ok(Ok(response)) => {
-            if !response.status().is_success() {
-                println!("Steam API returned non-success status: {}", response.status());
-                return Err(format!("Steam API returned status {}", response.status()));
+    // Use centralized Steam API with high priority (user-initiated)
+    match STEAM_API.get_game_details(&app_id, ApiPriority::High).await {
+        Ok(game_info) => {
+            // Save to cache
+            if let Err(e) = save_steam_app_info_to_cache(&app_id, &game_info) {
+                println!("Failed to cache game details for {}: {}", app_id, e);
             }
-            
-            match response.json::<SteamAppDetailsResponse>().await {
-                Ok(app_details) => {
-                    if let Some(app_data) = app_details.apps.get(&app_id) {
-                        if app_data.success {
-                            if let Some(data) = &app_data.data {
-                                println!("Successfully fetched details for {}: {}", app_id, data.name);
-                                
-                                // Save to cache
-                                if let Err(e) = save_steam_app_info_to_cache(&app_id, data) {
-                                    println!("Failed to cache game details for {}: {}", app_id, e);
-                                }
-                                
-                                return Ok(data.clone());
-                            }
-                        }
-                    }
-                    let msg = format!("Steam API returned success=false or no data for AppID {}", app_id);
-                    println!("{}", msg);
-                    Err(msg)
-                },
-                Err(e) => {
-                    let msg = format!("Failed to parse Steam API response: {}", e);
-                    println!("{}", msg);
-                    Err(msg)
-                }
-            }
+            Ok(game_info)
         },
-        Ok(Err(e)) => {
-            let msg = format!("HTTP error fetching from Steam API: {}", e);
-            println!("{}", msg);
-            Err(msg)
-        },
-        Err(_) => {
-            let msg = format!("Timeout fetching from Steam API for AppID {}", app_id);
-            println!("{}", msg);
-            Err(msg)
-        }
+        Err(e) => Err(e)
     }
 }
 
@@ -330,23 +281,50 @@ pub async fn save_settings(settings: AppSettings, state: State<'_, AppState>) ->
 
 #[command]
 pub async fn get_batch_game_details(app_ids: Vec<String>) -> Result<Vec<crate::models::SteamAppInfo>, String> {
-    println!("Fetching batch game details for {} apps: {:?}", app_ids.len(), app_ids);
+    println!("Fetching batch game details for {} apps", app_ids.len());
     
     let mut results = Vec::new();
+    let mut apps_to_fetch = Vec::new();
     
-    for app_id in app_ids {
-        match get_game_details(app_id.clone()).await {
-            Ok(details) => {
-                println!("Successfully fetched details for {}: {}", app_id, details.name);
-                results.push(details);
-            }
-            Err(e) => {
-                println!("Failed to fetch details for {}: {}", app_id, e);
+    // First check cache for all apps
+    for app_id in &app_ids {
+        if let Ok(cached_info) = load_steam_app_info_from_cache(app_id) {
+            println!("Loaded game details for AppID {} from cache", app_id);
+            results.push(cached_info);
+        } else {
+            apps_to_fetch.push(app_id.clone());
+        }
+    }
+    
+    if !apps_to_fetch.is_empty() {
+        println!("Fetching {} apps from Steam API with rate limiting", apps_to_fetch.len());
+        
+        // Use centralized Steam API with normal priority for batch operations
+        let api_results = STEAM_API.get_batch_game_details(apps_to_fetch, ApiPriority::Normal).await;
+        
+        // Process results and cache successful ones
+        for (i, result) in api_results.into_iter().enumerate() {
+            match result {
+                Ok(game_info) => {
+                    println!("Successfully fetched details for: {}", game_info.name);
+                    
+                    // Save to cache
+                    if let Some(app_id) = app_ids.get(i) {
+                        if let Err(e) = save_steam_app_info_to_cache(app_id, &game_info) {
+                            println!("Failed to cache game details for {}: {}", app_id, e);
+                        }
+                    }
+                    
+                    results.push(game_info);
+                }
+                Err(e) => {
+                    println!("Failed to fetch details: {}", e);
+                }
             }
         }
     }
     
-    println!("Successfully fetched {} out of requested game details", results.len());
+    println!("Successfully fetched {} out of {} requested game details", results.len(), app_ids.len());
     Ok(results)
 }
 
@@ -400,7 +378,7 @@ fn load_steam_app_info_from_cache(app_id: &str) -> Result<SteamAppInfo, String> 
     }
 }
 
-fn save_steam_app_info_to_cache(app_id: &str, steam_app_info: &SteamAppInfo) -> Result<(), String> {
+pub fn save_steam_app_info_to_cache(app_id: &str, steam_app_info: &SteamAppInfo) -> Result<(), String> {
     let cache_path = get_steam_cache_file_path(app_id)?;
     let content = serde_json::to_string_pretty(steam_app_info).map_err(|e| e.to_string())?;
     std::fs::write(&cache_path, content).map_err(|e| e.to_string())?;
@@ -2165,9 +2143,31 @@ pub async fn find_game_directory(app_id: String) -> Result<String, String> {
     
     // Game directory mappings (AppID -> folder name)
     let game_directories = HashMap::from([
-        ("582160".to_string(), "Assassins Creed Origins".to_string()),
-        ("2208920".to_string(), "Assassins Creed Valhalla".to_string()),
-        ("2138710".to_string(), "Watch Dogs Legion".to_string()),
+        ("2622380".to_string(), "Elden Ring Nightreign".to_string()),
+("3240220".to_string(), "Grand Theft Auto V Enhanced".to_string()),
+("1547000".to_string(), "Grand Theft Auto San Andreas Definitive Edition".to_string()),
+("1546970".to_string(), "Grand Theft Auto III Definitive Edition".to_string()),
+("1546990".to_string(), "Grand Theft Auto Vice City Definitive Edition".to_string()),
+("582160".to_string(), "Assassins Creed Origins".to_string()),
+("2208920".to_string(), "Assassins Creed Valhalla".to_string()),
+("3035570".to_string(), "Assassins Creed Mirage".to_string()),
+("812140".to_string(), "Assassins Creed Odyssey".to_string()),
+("311560".to_string(), "Assassins Creed Rogue".to_string()),
+("2239550".to_string(), "Watch Dogs Legion".to_string()),
+("447040".to_string(), "Watch Dogs 2".to_string()),
+("243470".to_string(), "Watch Dogs".to_string()),
+("637650".to_string(), "Final Fantasy XV Windows Edition".to_string()),
+("2050650".to_string(), "Resident Evil 4".to_string()),
+("1235140".to_string(), "Yakuza Like a Dragon".to_string()),
+("208650".to_string(), "Batman Arkham Knight".to_string()),
+("2668510".to_string(), "Red Dead Redemption".to_string()),
+("438490".to_string(), "God Eater 2 Rage Burst".to_string()),
+("1222690".to_string(), "Dragon Age Inquisition".to_string()),
+("1259970".to_string(), "eFootball PES 2021".to_string()),
+("1496790".to_string(), "Gotham Knights".to_string()),
+("1774580".to_string(), "Star Wars Battlefront".to_string()),
+("371660".to_string(), "Far Cry Primal".to_string()),
+("626690".to_string(), "Sword Art Online Fatal Bullet".to_string()),
         // Add more mappings as needed
     ]);
     
