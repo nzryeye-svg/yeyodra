@@ -1,0 +1,288 @@
+.confirmation-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.confirmation-modal {
+  background: linear-gradient(145deg, #1e2328, #252a30);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid #3c4043;
+  animation: modalAppear 0.3s ease-out;
+
+  &__header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #3c4043;
+  }
+
+  &__title {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  &__content {
+    padding: 24px;
+  }
+
+  &__game-info {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid #3c4043;
+  }
+
+  &__game-image {
+    width: 120px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  &__game-details {
+    flex: 1;
+
+    h4 {
+      margin: 0 0 8px 0;
+      color: #ffffff;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+  }
+
+  &__app-id {
+    margin: 0;
+    color: #8b949e;
+    font-size: 0.9rem;
+  }
+
+  &__message {
+    margin-bottom: 20px;
+
+    p {
+      margin: 0;
+      color: #c9d1d9;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+  }
+
+  &__warning {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+
+  &__warning-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  &__warning-content {
+    flex: 1;
+
+    h5 {
+      margin: 0 0 8px 0;
+      color: #ffc107;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 16px;
+      color: #c9d1d9;
+
+      li {
+        margin-bottom: 4px;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  &__info {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(13, 110, 253, 0.1);
+    border: 1px solid rgba(13, 110, 253, 0.3);
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  &__info-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    color: #0d6efd;
+  }
+
+  &__info-content {
+    flex: 1;
+
+    p {
+      margin: 0 0 8px 0;
+      color: #c9d1d9;
+      font-size: 0.95rem;
+
+      strong {
+        color: #ffffff;
+      }
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 16px;
+      color: #8b949e;
+
+      li {
+        margin-bottom: 4px;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  &__actions {
+    padding: 16px 24px 24px;
+    border-top: 1px solid #3c4043;
+  }
+
+  &__shortcuts {
+    text-align: center;
+    margin-bottom: 16px;
+    
+    span {
+      font-size: 0.8rem;
+      color: #8b949e;
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid #3c4043;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      color: #c9d1d9;
+      margin: 0 2px;
+    }
+  }
+
+  &__buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  &__btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+
+    &--cancel {
+      background: transparent;
+      color: #8b949e;
+      border: 1px solid #3c4043;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #c9d1d9;
+        border-color: #586069;
+      }
+    }
+
+    &--confirm {
+      background: linear-gradient(145deg, #0d6efd, #0b5ed7);
+      color: #ffffff;
+      border: 1px solid #0d6efd;
+
+      &:hover {
+        background: linear-gradient(145deg, #0b5ed7, #0a58ca);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+  }
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .confirmation-modal {
+    width: 95%;
+    margin: 20px;
+
+    &__game-info {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    &__game-image {
+      width: 100%;
+      height: auto;
+    }
+
+    &__buttons {
+      flex-direction: column-reverse;
+
+      .confirmation-modal__btn {
+        width: 100%;
+      }
+    }
+
+    &__shortcuts {
+      margin-bottom: 12px;
+      
+      span {
+        font-size: 0.75rem;
+      }
+    }
+  }
+}

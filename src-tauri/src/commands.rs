@@ -5,7 +5,7 @@ use std::path::Path;
 use std::fs::{self, File};
 use std::io::Write;
 use std::time::Duration;
-use tauri::{command, State};
+use tauri::{command, State, AppHandle, Manager};
 use uuid::Uuid;
 use walkdir::WalkDir;
 use zip::ZipArchive;
@@ -17,6 +17,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use futures::StreamExt;
 use bytes::Bytes;
+use std::time::Instant;
 
 // Application state type
 type AppState = crate::AppState;
@@ -1762,16 +1763,206 @@ SteamRemotePlay001
 }
 
 // Bypass related structs and functions
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BypassProgress {
     pub step: String,
     pub progress: f64,
     pub message: String,
+    pub download_info: Option<DownloadInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DownloadInfo {
+    pub downloaded: u64,
+    pub total: u64,
+    pub speed: f64,
+}
+
+// Function to detect and convert Google Drive URLs to file ID
+fn convert_gdrive_url_to_file_id(url: &str) -> Option<String> {
+    if url.contains("drive.google.com") && url.contains("/file/d/") {
+        // Extract file ID from various Google Drive URL formats
+        if let Some(start) = url.find("/file/d/") {
+            let id_start = start + 8; // Length of "/file/d/"
+            let remaining = &url[id_start..];
+            let file_id = if let Some(end) = remaining.find('/') {
+                &remaining[..end]
+            } else if let Some(end) = remaining.find('?') {
+                &remaining[..end]
+            } else {
+                remaining
+            };
+            Some(file_id.to_string())
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+// Function to handle Google Drive large file downloads with streaming and progress tracking
+async fn download_large_gdrive_file(
+    file_id: &str, 
+    output_path: &std::path::Path, 
+    app_handle: Option<&AppHandle>
+) -> Result<(), String> {
+    use tokio::io::AsyncWriteExt;
+    use futures::StreamExt;
+    
+    println!("Starting Google Drive large file download for ID: {}", file_id);
+    
+    let client = Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .timeout(std::time::Duration::from_secs(3600)) // 1 hour timeout for large files
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    // Multiple Google Drive download endpoints to try
+    let download_urls = vec![
+        format!("https://drive.usercontent.google.com/download?id={}&export=download&confirm=t", file_id),
+        format!("https://drive.google.com/uc?export=download&id={}&confirm=t", file_id),
+        format!("https://drive.google.com/uc?export=download&id={}", file_id),
+        format!("https://docs.google.com/uc?export=download&id={}", file_id),
+    ];
+
+    for (attempt, url) in download_urls.iter().enumerate() {
+        println!("Attempt {}: Trying download URL: {}", attempt + 1, url);
+        
+        let response = client.get(url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+            .send()
+            .await
+            .map_err(|e| format!("Failed to start download: {}", e))?;
+
+        println!("Response status: {}", response.status());
+        
+        // Check if we got HTML response (Google Drive warning page)
+        let content_type = response.headers().get("content-type")
+            .and_then(|ct| ct.to_str().ok())
+            .unwrap_or("");
+            
+        if content_type.contains("text/html") {
+            println!("Got HTML response, trying next URL...");
+            continue;
+        }
+
+        if response.status().is_success() {
+            println!("Starting streaming download...");
+            
+            // Get content length for progress tracking
+            let content_length = response.headers()
+                .get("content-length")
+                .and_then(|ct| ct.to_str().ok())
+                .and_then(|ct| ct.parse::<u64>().ok())
+                .unwrap_or(0);
+            
+            // Create file for streaming write
+            let mut file = tokio::fs::File::create(output_path)
+                .await
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+
+            // Stream download for large files with progress tracking
+            let mut stream = response.bytes_stream();
+            let mut total_downloaded = 0u64;
+            let mut last_progress_emit = 0u64;
+            let start_time = Instant::now();
+            let mut last_speed_calc = start_time;
+
+            while let Some(chunk_result) = stream.next().await {
+                let chunk = chunk_result.map_err(|e| format!("Failed to read chunk: {}", e))?;
+                
+                file.write_all(&chunk).await
+                    .map_err(|e| format!("Failed to write chunk: {}", e))?;
+                    
+                total_downloaded += chunk.len() as u64;
+                
+                // Emit progress every 10MB or 5% whichever is smaller
+                let progress_threshold = if content_length > 0 {
+                    std::cmp::min(10 * 1024 * 1024, content_length / 20) // 10MB or 5%
+                } else {
+                    50 * 1024 * 1024 // 50MB for unknown size
+                };
+                
+                if total_downloaded - last_progress_emit >= progress_threshold {
+                    // Calculate download speed
+                    let elapsed = last_speed_calc.elapsed();
+                    let speed = if elapsed.as_secs() > 0 {
+                        (total_downloaded - last_progress_emit) as f64 / elapsed.as_secs_f64()
+                    } else {
+                        0.0
+                    };
+                    
+                    // Emit progress event
+                    if let Some(handle) = app_handle {
+                        let download_info = DownloadInfo {
+                            downloaded: total_downloaded,
+                            total: content_length,
+                            speed,
+                        };
+                        
+                        let progress = BypassProgress {
+                            step: "download".to_string(),
+                            progress: if content_length > 0 {
+                                (total_downloaded as f64 / content_length as f64) * 100.0
+                            } else {
+                                0.0
+                            },
+                            message: format!("Downloading... {} MB", total_downloaded / (1024 * 1024)),
+                            download_info: Some(download_info),
+                        };
+                        
+                        let _ = handle.emit_all("bypass-progress", &progress);
+                    }
+                    
+                    println!("Downloaded: {} MB", total_downloaded / (1024 * 1024));
+                    last_progress_emit = total_downloaded;
+                    last_speed_calc = Instant::now();
+                }
+            }
+
+            file.flush().await
+                .map_err(|e| format!("Failed to flush file: {}", e))?;
+
+            println!("✅ Successfully downloaded {} MB from Google Drive", total_downloaded / (1024 * 1024));
+            
+            // Emit completion progress
+            if let Some(handle) = app_handle {
+                let progress = BypassProgress {
+                    step: "download".to_string(),
+                    progress: 100.0,
+                    message: "Download completed".to_string(),
+                    download_info: None,
+                };
+                let _ = handle.emit_all("bypass-progress", &progress);
+            }
+            
+            return Ok(());
+        } else {
+            println!("Failed with status: {}, trying next URL...", response.status());
+        }
+    }
+
+    Err("❌ All Google Drive download URLs failed. File may require manual download confirmation for large files.".to_string())
 }
 
 #[command]
-pub async fn download_bypass_file(url: String, app_id: String, state: State<'_, AppState>) -> Result<String, String> {
+pub async fn download_bypass_file(
+    url: String, 
+    app_id: String, 
+    state: State<'_, AppState>, 
+    app_handle: AppHandle
+) -> Result<String, String> {
     println!("Downloading bypass file from: {}", url);
+    
+    // Emit initial progress
+    let progress = BypassProgress {
+        step: "download".to_string(),
+        progress: 0.0,
+        message: "Starting download...".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
     
     // Get current settings for bypass directory
     let bypass_dir = {
@@ -1779,16 +1970,6 @@ pub async fn download_bypass_file(url: String, app_id: String, state: State<'_, 
         PathBuf::from(&settings_guard.bypass_download_directory)
     };
     
-    let client = Client::new();
-    let response = client.get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to download file: {}", e))?;
-    
-    if !response.status().is_success() {
-        return Err(format!("Download failed with status: {}", response.status()));
-    }
-
     // Ensure bypass directory exists
     if !bypass_dir.exists() {
         fs::create_dir_all(&bypass_dir)
@@ -1798,21 +1979,90 @@ pub async fn download_bypass_file(url: String, app_id: String, state: State<'_, 
     let filename = format!("bypass_{}.zip", app_id);
     let file_path = bypass_dir.join(&filename);
     
-    // Download file
-    let bytes = response.bytes()
-        .await
-        .map_err(|e| format!("Failed to read response bytes: {}", e))?;
+    // Check if it's a Google Drive URL and handle accordingly
+    if let Some(file_id) = convert_gdrive_url_to_file_id(&url) {
+        println!("🔍 Detected Google Drive URL, using specialized large file download...");
+        println!("📁 File ID: {}", file_id);
+        println!("⚠️  Large files may take several minutes to download");
+        
+        // Use specialized Google Drive download function
+        download_large_gdrive_file(&file_id, &file_path, Some(&app_handle)).await?;
+    } else {
+        println!("🔗 Using standard download for non-Google Drive URL");
+        
+        // Emit progress for standard download
+        let progress = BypassProgress {
+            step: "download".to_string(),
+            progress: 25.0,
+            message: "Downloading from standard URL...".to_string(),
+            download_info: None,
+        };
+        let _ = app_handle.emit_all("bypass-progress", &progress);
+        
+        // Use standard download for other URLs
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(1800)) // 30 minutes timeout
+            .redirect(reqwest::redirect::Policy::limited(10))
+            .build()
+            .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+            
+        let response = client.get(&url)
+            .header("User-Agent", "YeyodraBypassDownloader/1.0")
+            .send()
+            .await
+            .map_err(|e| format!("Failed to download file: {}", e))?;
+        
+        if !response.status().is_success() {
+            return Err(format!("Download failed with status: {}", response.status()));
+        }
+
+        // Download file
+        let progress = BypassProgress {
+            step: "download".to_string(),
+            progress: 75.0,
+            message: "Receiving data...".to_string(),
+            download_info: None,
+        };
+        let _ = app_handle.emit_all("bypass-progress", &progress);
+        
+        let bytes = response.bytes()
+            .await
+            .map_err(|e| format!("Failed to read response bytes: {}", e))?;
+        
+        fs::write(&file_path, bytes)
+            .map_err(|e| format!("Failed to write file: {}", e))?;
+            
+        // Emit completion for standard download
+        let progress = BypassProgress {
+            step: "download".to_string(),
+            progress: 100.0,
+            message: "Download completed".to_string(),
+            download_info: None,
+        };
+        let _ = app_handle.emit_all("bypass-progress", &progress);
+    }
     
-    fs::write(&file_path, bytes)
-        .map_err(|e| format!("Failed to write file: {}", e))?;
-    
-    println!("Bypass file downloaded to: {:?}", file_path);
+    println!("✅ Bypass file downloaded to: {:?}", file_path);
     Ok(file_path.to_string_lossy().to_string())
 }
 
 #[command]
-pub async fn extract_bypass_file(zip_path: String, app_id: String, state: State<'_, AppState>) -> Result<String, String> {
+pub async fn extract_bypass_file(
+    zip_path: String, 
+    app_id: String, 
+    state: State<'_, AppState>, 
+    app_handle: AppHandle
+) -> Result<String, String> {
     println!("Extracting bypass file: {}", zip_path);
+    
+    // Emit initial progress
+    let progress = BypassProgress {
+        step: "extract".to_string(),
+        progress: 0.0,
+        message: "Starting extraction...".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
     
     let zip_path = Path::new(&zip_path);
     if !zip_path.exists() {
@@ -1836,11 +2086,22 @@ pub async fn extract_bypass_file(zip_path: String, app_id: String, state: State<
         .map_err(|e| format!("Failed to create extract directory: {}", e))?;
     
     // Extract ZIP file
+    let progress = BypassProgress {
+        step: "extract".to_string(),
+        progress: 10.0,
+        message: "Opening ZIP archive...".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     let file = File::open(zip_path)
         .map_err(|e| format!("Failed to open ZIP file: {}", e))?;
     
     let mut archive = ZipArchive::new(file)
         .map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+    
+    let total_files = archive.len();
+    println!("Extracting {} files...", total_files);
     
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)
@@ -1865,7 +2126,28 @@ pub async fn extract_bypass_file(zip_path: String, app_id: String, state: State<
             std::io::copy(&mut file, &mut outfile)
                 .map_err(|e| format!("Failed to extract file: {}", e))?;
         }
+        
+        // Emit progress every 10 files or every 10%
+        if i % 10 == 0 || (i + 1) % (total_files / 10).max(1) == 0 {
+            let progress_pct = ((i + 1) as f64 / total_files as f64) * 100.0;
+            let progress = BypassProgress {
+                step: "extract".to_string(),
+                progress: progress_pct,
+                message: format!("Extracting files... {}/{}", i + 1, total_files),
+                download_info: None,
+            };
+            let _ = app_handle.emit_all("bypass-progress", &progress);
+        }
     }
+    
+    // Emit completion
+    let progress = BypassProgress {
+        step: "extract".to_string(),
+        progress: 100.0,
+        message: "Extraction completed".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
     
     println!("Bypass file extracted to: {:?}", extract_dir);
     Ok(extract_dir.to_string_lossy().to_string())
@@ -1885,6 +2167,7 @@ pub async fn find_game_directory(app_id: String) -> Result<String, String> {
     let game_directories = HashMap::from([
         ("582160".to_string(), "Assassins Creed Origins".to_string()),
         ("2208920".to_string(), "Assassins Creed Valhalla".to_string()),
+        ("2138710".to_string(), "Watch Dogs Legion".to_string()),
         // Add more mappings as needed
     ]);
     
@@ -1917,31 +2200,55 @@ pub async fn copy_bypass_files(extract_dir: String, game_dir: String) -> Result<
         return Err("Game directory not found".to_string());
     }
     
-    // Find the actual bypass files (usually in a subdirectory)
+    // Find the actual bypass files (search deeper for nested structures)
     let mut bypass_source_dir = extract_path.to_path_buf();
+    let mut found_files = false;
     
-    // Look for the first subdirectory that contains files
-    for entry in WalkDir::new(extract_path).min_depth(1).max_depth(2) {
+    println!("🔍 Searching for bypass files in extracted directory...");
+    
+    // Look for directories that contain executable files or common bypass files
+    for entry in WalkDir::new(extract_path).min_depth(1).max_depth(5) {
         let entry = entry.map_err(|e| format!("Failed to read directory: {}", e))?;
         let path = entry.path();
         
         if path.is_dir() {
-            // Check if this directory contains files
-            let has_files = fs::read_dir(path)
+            println!("Checking directory: {:?}", path);
+            
+            // Check if this directory contains bypass-related files
+            let dir_contents: Vec<_> = fs::read_dir(path)
                 .map_err(|e| format!("Failed to read directory contents: {}", e))?
-                .any(|entry| {
-                    if let Ok(entry) = entry {
-                        entry.path().is_file()
+                .filter_map(|entry| entry.ok())
+                .collect();
+            
+            let has_executable_files = dir_contents.iter().any(|entry| {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(extension) = path.extension() {
+                        let ext = extension.to_string_lossy().to_lowercase();
+                        ext == "exe" || ext == "dll" || ext == "asi" || ext == "bin"
                     } else {
                         false
                     }
-                });
+                } else {
+                    false
+                }
+            });
             
-            if has_files {
+            let has_many_files = dir_contents.iter().filter(|entry| entry.path().is_file()).count() >= 3;
+            
+            if has_executable_files || has_many_files {
+                println!("✅ Found bypass files in: {:?}", path);
                 bypass_source_dir = path.to_path_buf();
+                found_files = true;
                 break;
             }
         }
+    }
+    
+    if !found_files {
+        println!("⚠️  No specific bypass directory found, using root extract directory");
+        // Fallback to using the extract directory itself
+        bypass_source_dir = extract_path.to_path_buf();
     }
     
     // Copy all files from bypass directory to game directory
@@ -2062,7 +2369,12 @@ pub struct BypassResult {
 }
 
 #[command]
-pub async fn apply_bypass_automatically(app_id: String, bypass_url: String, state: State<'_, AppState>) -> Result<BypassResult, String> {
+pub async fn apply_bypass_automatically(
+    app_id: String, 
+    bypass_url: String, 
+    state: State<'_, AppState>, 
+    app_handle: AppHandle
+) -> Result<BypassResult, String> {
     println!("Starting automatic bypass application for AppID: {}", app_id);
     
     // Get current settings
@@ -2072,21 +2384,77 @@ pub async fn apply_bypass_automatically(app_id: String, bypass_url: String, stat
     };
     
     // Step 1: Download bypass file
-    let zip_path = download_bypass_file(bypass_url, app_id.clone(), state.clone()).await?;
+    let zip_path = download_bypass_file(bypass_url, app_id.clone(), state.clone(), app_handle.clone()).await?;
     
     // Step 2: Extract bypass file
-    let extract_dir = extract_bypass_file(zip_path.clone(), app_id.clone(), state.clone()).await?;
+    let extract_dir = extract_bypass_file(zip_path.clone(), app_id.clone(), state.clone(), app_handle.clone()).await?;
     
     // Step 3: Find game directory
+    let progress = BypassProgress {
+        step: "locate".to_string(),
+        progress: 0.0,
+        message: "Finding game directory...".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     let game_dir = find_game_directory(app_id.clone()).await?;
     
+    let progress = BypassProgress {
+        step: "locate".to_string(),
+        progress: 100.0,
+        message: format!("Game directory found: {}", game_dir),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     // Step 4: Copy bypass files
+    let progress = BypassProgress {
+        step: "copy".to_string(),
+        progress: 0.0,
+        message: "Copying bypass files...".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     copy_bypass_files(extract_dir.clone(), game_dir.clone()).await?;
     
+    let progress = BypassProgress {
+        step: "copy".to_string(),
+        progress: 100.0,
+        message: "Bypass files copied successfully".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     // Step 5: Detect game executables
+    let progress = BypassProgress {
+        step: "detect".to_string(),
+        progress: 0.0,
+        message: "Detecting game executables...".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     let executables = detect_game_executables(game_dir.clone()).await.unwrap_or_default();
     
+    let progress = BypassProgress {
+        step: "detect".to_string(),
+        progress: 100.0,
+        message: format!("Found {} executable(s)", executables.len()),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     // Step 6: Conditional cleanup based on settings
+    let progress = BypassProgress {
+        step: "cleanup".to_string(),
+        progress: 0.0,
+        message: "Cleaning up temporary files...".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
+    
     if !settings.keep_temporary_files {
         // User wants to cleanup temporary files
         println!("Cleaning up temporary files (keep_temporary_files = false)");
@@ -2098,6 +2466,14 @@ pub async fn apply_bypass_automatically(app_id: String, bypass_url: String, stat
         println!("ZIP file kept at: {}", zip_path);
         println!("Extract folder kept at: {}", extract_dir);
     }
+    
+    let progress = BypassProgress {
+        step: "cleanup".to_string(),
+        progress: 100.0,
+        message: "Cleanup completed".to_string(),
+        download_info: None,
+    };
+    let _ = app_handle.emit_all("bypass-progress", &progress);
     
     Ok(BypassResult {
         success: true,

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
+import { listen } from '@tauri-apps/api/event';
 import { LaunchGameModal } from './LaunchGameModal';
+import { ConfirmationModal } from './ConfirmationModal';
+import { BypassProgressBar } from './BypassProgressBar';
 import './Bypass.scss';
 
 export function Bypass({ showNotification }) {
@@ -13,6 +16,18 @@ export function Bypass({ showNotification }) {
     gameDirectory: '',
     executables: []
   });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    gameInfo: null
+  });
+  const [progressData, setProgressData] = useState({
+    isVisible: false,
+    currentStep: 'download',
+    progress: 0,
+    gameName: '',
+    downloadProgress: null,
+    isGoogleDrive: false
+  });
 
   // Game AppIDs with their bypass URLs
   const gameBypassData = [
@@ -23,12 +38,34 @@ export function Bypass({ showNotification }) {
     {
       appId: '2208920',
       bypassUrl: 'https://cdn.discordapp.com/attachments/1390024010758361240/1404019856348807260/Assassins_Creed_Valhalla_fix.zip?ex=68ac1fe3&is=68aace63&hm=a2b14cd239bf36af558c0799b5942ae46607faaca316c1b2a0e2df39c4e51d05&'
+    },
+    {
+      appId: '2239550', // Watch Dogs: Legion
+      bypassUrl: 'https://drive.google.com/file/d/1BU-DS2j0Uo3TG9xOmJyEqqXly1dACIrc/view?pli=1'
     }
     // Add more games and their bypass URLs here
+    // Supports: Discord CDN, Google Drive, GitHub Releases, MediaFire, MEGA
   ];
 
   useEffect(() => {
     fetchGames();
+    
+    // Set up event listener for bypass progress
+    const unlistenProgress = listen('bypass-progress', (event) => {
+      const progressInfo = event.payload;
+      console.log('Progress update:', progressInfo);
+      
+      setProgressData(prev => ({
+        ...prev,
+        currentStep: progressInfo.step,
+        progress: progressInfo.progress,
+        downloadProgress: progressInfo.download_info,
+      }));
+    });
+
+    return () => {
+      unlistenProgress.then(unlisten => unlisten());
+    };
   }, []);
 
   const fetchGames = async () => {
@@ -64,7 +101,7 @@ export function Bypass({ showNotification }) {
     }
   };
 
-  const handleBypassGame = async (game) => {
+  const showConfirmationModal = (game) => {
     if (!game.bypass_url) {
       if (showNotification) {
         showNotification.showWarning('Bypass URL not available for this game');
@@ -72,10 +109,43 @@ export function Bypass({ showNotification }) {
       return;
     }
 
+    setConfirmationModal({
+      isOpen: true,
+      gameInfo: game
+    });
+  };
+
+  const handleConfirmBypass = async () => {
+    const game = confirmationModal.gameInfo;
+    
+    // Close confirmation modal
+    setConfirmationModal({
+      isOpen: false,
+      gameInfo: null
+    });
+
+    // Show progress bar instead of loading spinner
+    setProgressData({
+      isVisible: true,
+      currentStep: 'download',
+      progress: 0,
+      gameName: game.name,
+      downloadProgress: null,
+      isGoogleDrive: game.bypass_url.includes('drive.google.com')
+    });
+
     setIsLoading(true);
     try {
       if (showNotification) {
-        showNotification.showInfo(`Starting bypass process for ${game.name}...`);
+        // Enhanced notifications for different file types
+        if (game.bypass_url.includes('drive.google.com')) {
+          showNotification.showInfo(`🔍 Starting Google Drive download for ${game.name}...`);
+          showNotification.showWarning('📁 Large file detected from Google Drive. This may take 10-30 minutes depending on file size and internet speed.');
+        } else if (game.bypass_url.includes('cdn.discordapp.com')) {
+          showNotification.showInfo(`⚡ Starting fast download for ${game.name}...`);
+        } else {
+          showNotification.showInfo(`🔄 Starting bypass process for ${game.name}...`);
+        }
       }
 
       // Use the automatic bypass function
@@ -113,10 +183,25 @@ export function Bypass({ showNotification }) {
     } catch (error) {
       console.error('Error applying bypass:', error);
       if (showNotification) {
-        showNotification.showError(`❌ Failed to apply bypass: ${error}`);
+        // Enhanced error messages for different scenarios
+        const errorStr = error.toString().toLowerCase();
+        
+        if (errorStr.includes('google drive') && errorStr.includes('confirmation')) {
+          showNotification.showError('❌ Google Drive requires manual confirmation for large files. Please try downloading the file manually first, or use an alternative download link.');
+        } else if (errorStr.includes('timeout') || errorStr.includes('timed out')) {
+          showNotification.showError('⏱️ Download timed out. Large files may require multiple attempts. Please check your internet connection and try again.');
+        } else if (errorStr.includes('virus scan') || errorStr.includes('cannot scan')) {
+          showNotification.showError('🦠 Google Drive cannot scan large files for viruses. File download was blocked for safety. Try using an alternative download source.');
+        } else if (errorStr.includes('failed to download')) {
+          showNotification.showError('📡 Download failed. Please check your internet connection and verify the download URL is still valid.');
+        } else {
+          showNotification.showError(`❌ Failed to apply bypass: ${error}`);
+        }
       }
     } finally {
       setIsLoading(false);
+      // Hide progress bar
+      setProgressData(prev => ({ ...prev, isVisible: false }));
     }
   };
 
@@ -126,6 +211,13 @@ export function Bypass({ showNotification }) {
       gameName: '',
       gameDirectory: '',
       executables: []
+    });
+  };
+
+  const closeConfirmationModal = () => {
+    setConfirmationModal({
+      isOpen: false,
+      gameInfo: null
     });
   };
 
@@ -153,7 +245,7 @@ export function Bypass({ showNotification }) {
                 <div className="bypass__game-overlay">
                   <button 
                     className="bypass__game-button"
-                    onClick={() => handleBypassGame(game)}
+                    onClick={() => showConfirmationModal(game)}
                     disabled={isLoading}
                   >
                     🛡️ Apply Bypass
@@ -168,12 +260,26 @@ export function Bypass({ showNotification }) {
         </div>
       )}
 
-      {isLoading && (
-        <div className="bypass__loading-overlay">
-          <div className="bypass__loading-spinner"></div>
-          <p>Applying bypass...</p>
-        </div>
-      )}
+      <BypassProgressBar
+        isVisible={progressData.isVisible}
+        currentStep={progressData.currentStep}
+        progress={progressData.progress}
+        gameName={progressData.gameName}
+        downloadProgress={progressData.downloadProgress}
+        isGoogleDrive={progressData.isGoogleDrive}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onConfirm={handleConfirmBypass}
+        onCancel={closeConfirmationModal}
+        title="Confirm Bypass Application"
+        message="Are you sure you want to apply bypass for this game? This will download and install bypass files to your game directory."
+        confirmText="Apply Bypass"
+        cancelText="Cancel"
+        isGoogleDrive={confirmationModal.gameInfo?.bypass_url?.includes('drive.google.com')}
+        gameInfo={confirmationModal.gameInfo}
+      />
 
       <LaunchGameModal
         isOpen={launchModal.isOpen}

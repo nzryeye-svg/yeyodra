@@ -77,6 +77,17 @@ let game_directories = HashMap::from([
   appId: 'STEAM_APP_ID',        // Steam AppID (string)
   bypassUrl: 'DIRECT_ZIP_URL'   // Direct download URL ke ZIP file
 }
+
+// Examples:
+{
+  appId: '582160',             // Assassin's Creed Origins
+  bypassUrl: 'https://cdn.discordapp.com/attachments/.../file.zip'
+}
+
+{
+  appId: '2138710',            // Watch Dogs: Legion  
+  bypassUrl: 'https://drive.google.com/file/d/FILE_ID/view'  // ✅ Auto-converts!
+}
 ```
 
 ### Directory Mapping Structure
@@ -104,14 +115,22 @@ let game_directories = HashMap::from([
 
 ## 📁 Supported File Hosting
 
-### ✅ Recommended:
-- **Discord CDN** - Fast, reliable
+### ✅ Fully Supported (Auto-Detection):
+- **Google Drive** - ⭐ NEW! Auto-detects and handles large files (500MB+)
+- **Discord CDN** - Fast, reliable for smaller files
 - **GitHub Releases** - Version controlled
-- **Google Drive** (direct link) - Large storage
+- **Standard HTTP/HTTPS** - Direct download links
+
+### 🔧 Google Drive Large File Support:
+- **Automatic conversion** from share URL to download URL
+- **Streaming download** for files 500MB+ with progress tracking
+- **Multiple endpoint fallback** for reliability
+- **Extended timeout** (1 hour) for large downloads
+- **Smart error handling** for virus scan warnings
 
 ### ⚠️ Need Direct Link:
 - **MediaFire** - Use direct download link
-- **MEGA** - Export as public link
+- **MEGA** - Export as public link  
 - **Dropbox** - Use direct download parameter
 
 ### ❌ Not Recommended:
