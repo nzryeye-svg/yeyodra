@@ -6,7 +6,7 @@ import { GameCard } from './components/GameCard';
 import GameDetails from './components/GameDetails';
 import { Featured } from './components/Featured';
 import { CategoryButtons } from './components/CategoryButtons';
-import { OfflineSetup } from './components/OfflineSetup';
+
 import { Bypass } from './components/Bypass';
 import { Settings } from './components/Settings';
 
@@ -189,8 +189,7 @@ function App() {
 
       case 'bypass':
         return 'Bypass Tools';
-      case 'offline':
-        return 'Offline Setup';
+
       case 'settings':
         return 'Settings';
       case 'peak':
@@ -339,12 +338,7 @@ function App() {
               />
             )}
 
-            {/* Offline Setup Tab */}
-            {activeTab === 'offline' && (
-              <OfflineSetup 
-                showNotification={{ showSuccess, showError, showWarning, showInfo }}
-              />
-            )}
+
 
             {/* Settings Tab */}
             {activeTab === 'settings' && (
