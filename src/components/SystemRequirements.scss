@@ -1,0 +1,290 @@
+.system-requirements {
+  width: 100%;
+  background: transparent;
+  
+  // Integration with unified layout
+  .requirements-section & {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  // Compact mode for sidebar
+  &--compact {
+    .system-requirements__tabs {
+      margin-bottom: 0;
+      
+      .tab {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+    }
+    
+    .system-requirements__content {
+      padding: 0.75rem;
+    }
+    
+    .requirements-list {
+      gap: 0.5rem;
+    }
+    
+    .requirement-row {
+      padding: 0.4rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      
+      &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      
+      &:first-child {
+        padding-top: 0;
+      }
+    }
+    
+    .requirement-label {
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+      
+      strong {
+        font-weight: 600;
+      }
+    }
+    
+    .requirement-value {
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    
+    .requirements-unavailable {
+      p {
+        font-size: 0.75rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.5);
+      }
+    }
+  }
+  
+  &__tabs {
+    display: flex;
+    margin-bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px 4px 0 0;
+    overflow: hidden;
+    
+    .tab {
+      flex: 1;
+      padding: 14px 20px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      position: relative;
+      
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 20%;
+        bottom: 20%;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.8);
+      }
+      
+      &--active {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        
+        &::after {
+          display: none;
+        }
+      }
+      
+      span {
+        display: block;
+        white-space: nowrap;
+      }
+    }
+  }
+  
+  &__content {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0 0 4px 4px;
+    padding: 0;
+    min-height: 200px;
+  }
+  
+  .requirements-list {
+    padding: 16px;
+    
+    .requirement-row {
+      display: flex;
+      margin-bottom: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      
+      &:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+      }
+      
+      .requirement-label {
+        min-width: 100px;
+        width: 100px;
+        flex-shrink: 0;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 13px;
+        
+        strong {
+          font-weight: 600;
+        }
+      }
+      
+      .requirement-value {
+        flex: 1;
+        color: #ffffff;
+        font-size: 13px;
+        line-height: 1.4;
+        padding-left: 12px;
+        word-wrap: break-word;
+        
+        // Handle long text
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+    }
+  }
+  
+  .requirements-unavailable {
+    padding: 40px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    
+    p {
+      margin: 0;
+      font-style: italic;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .system-requirements {
+    &__tabs {
+      .tab {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+    }
+    
+    .requirements-list {
+      padding: 12px;
+      
+      .requirement-row {
+        flex-direction: column;
+        margin-bottom: 16px;
+        padding: 10px 0;
+        
+        .requirement-label {
+          width: auto;
+          min-width: auto;
+          margin-bottom: 4px;
+        }
+        
+        .requirement-value {
+          padding-left: 0;
+        }
+      }
+    }
+  }
+}
+
+// Dark theme adjustments
+.dark-theme {
+  .system-requirements {
+    &__tabs {
+      border-bottom-color: rgba(255, 255, 255, 0.15);
+      
+      .tab {
+        background: rgba(255, 255, 255, 0.03);
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.06);
+        }
+        
+        &--active {
+          background: rgba(255, 255, 255, 0.08);
+        }
+      }
+    }
+    
+    &__content {
+      background: rgba(0, 0, 0, 0.4);
+    }
+    
+    .requirements-list {
+      .requirement-row {
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+      }
+    }
+  }
+}
+
+// Light theme adjustments (if needed)
+.light-theme {
+  .system-requirements {
+    &__tabs {
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+      
+      .tab {
+        background: rgba(0, 0, 0, 0.05);
+        color: rgba(0, 0, 0, 0.7);
+        
+        &:hover {
+          background: rgba(0, 0, 0, 0.08);
+          color: rgba(0, 0, 0, 0.9);
+        }
+        
+        &--active {
+          background: rgba(0, 0, 0, 0.1);
+          color: #000000;
+          border-bottom-color: #4a9eff;
+        }
+      }
+    }
+    
+    &__content {
+      background: rgba(255, 255, 255, 0.8);
+    }
+    
+    .requirements-list {
+      .requirement-row {
+        border-bottom-color: rgba(0, 0, 0, 0.05);
+        
+        .requirement-label {
+          color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .requirement-value {
+          color: #000000;
+        }
+      }
+    }
+    
+    .requirements-unavailable {
+      color: rgba(0, 0, 0, 0.6);
+    }
+  }
+}

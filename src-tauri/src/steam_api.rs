@@ -83,6 +83,18 @@ impl SteamApiManager {
                                 
                                 println!("Successfully fetched details for {}: {} ({}ms)", 
                                     app_id, data.name, response_time.as_millis());
+                                
+                                // Debug: Check if pc_requirements is present
+                                if let Some(ref pc_req) = data.pc_requirements {
+                                    println!("PC Requirements found for {}: minimum={}, recommended={}", 
+                                        app_id, 
+                                        pc_req.minimum.is_some(),
+                                        pc_req.recommended.is_some()
+                                    );
+                                } else {
+                                    println!("No PC Requirements found for {}", app_id);
+                                }
+                                
                                 return Ok(data.clone());
                             }
                             }

@@ -112,6 +112,8 @@ pub struct SteamAppInfo {
     pub drm_notice: Option<String>,
     #[serde(default)]
     pub dlc: Vec<u64>,
+    #[serde(default)]
+    pub pc_requirements: Option<PcRequirements>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -119,4 +121,12 @@ pub struct Screenshot {
     pub id: u64,
     pub path_thumbnail: String,
     pub path_full: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PcRequirements {
+    #[serde(default)]
+    pub minimum: Option<String>,
+    #[serde(default)]
+    pub recommended: Option<String>,
 }

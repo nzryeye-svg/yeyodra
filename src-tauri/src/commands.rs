@@ -49,7 +49,19 @@ pub async fn get_game_details(app_id: String) -> Result<SteamAppInfo, String> {
     // Try to load from cache first
     if let Ok(cached_info) = load_steam_app_info_from_cache(&app_id) {
         println!("Loaded game details for AppID {} from cache", app_id);
-        return Ok(cached_info);
+        
+        // Check if cached data has pc_requirements - if not, refresh from API
+        if cached_info.pc_requirements.is_some() {
+            println!("Cached PC Requirements for {}: minimum={}, recommended={}", 
+                app_id, 
+                cached_info.pc_requirements.as_ref().unwrap().minimum.is_some(),
+                cached_info.pc_requirements.as_ref().unwrap().recommended.is_some()
+            );
+            return Ok(cached_info);
+        } else {
+            println!("No cached PC Requirements for {} - refreshing from Steam API", app_id);
+            // Don't return cached data, continue to fetch from API
+        }
     }
 
     // Use centralized Steam API with high priority (user-initiated)
@@ -384,6 +396,18 @@ pub fn save_steam_app_info_to_cache(app_id: &str, steam_app_info: &SteamAppInfo)
     std::fs::write(&cache_path, content).map_err(|e| e.to_string())?;
     println!("Cached Steam app info for AppID {}", app_id);
     Ok(())
+}
+
+#[command]
+pub async fn clear_game_cache(app_id: String) -> Result<String, String> {
+    let cache_path = get_steam_cache_file_path(&app_id)?;
+    if cache_path.exists() {
+        std::fs::remove_file(&cache_path).map_err(|e| e.to_string())?;
+        println!("Cleared cache for AppID {}", app_id);
+        Ok(format!("Cache cleared for AppID {}", app_id))
+    } else {
+        Ok(format!("No cache found for AppID {}", app_id))
+    }
 }
 
 // Command to restart Steam

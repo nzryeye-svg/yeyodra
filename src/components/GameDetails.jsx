@@ -15,6 +15,8 @@ import {
 import { FiSettings, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import './GameDetails.scss';
 import DlcManager from './DlcManager';
+import SystemRequirements from './SystemRequirements';
+import DrmNotice from './DrmNotice';
 
 const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = null, onDownload = null, isDownloading = false }) => {
   const [details, setDetails] = useState(null);
@@ -253,101 +255,69 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
 
         <div className="game-detail-page__main">
           <div className="game-detail-page__left-col">
-            <div className="info-block downloads-block">
-              <p>No downloads available</p>
-            </div>
-            <div className="info-block meta-block">
-              <p>Released on {details.release_date?.date || 'N/A'}</p>
-              <p>Published by {details.publishers?.join(', ') || 'N/A'}</p>
-            </div>
-            <div className="info-block media-block">
-               {/* Screenshots section */}
-               <div className="screenshots-grid">
-                 {details.screenshots && details.screenshots.length > 0 ? (
-                   details.screenshots.slice(0, 4).map((screenshot, index) => (
-                     <div key={screenshot.id} className="screenshot-item">
-                       <img 
-                         src={screenshot.path_thumbnail} 
-                         alt={`Screenshot ${index + 1}`}
-                         onClick={() => window.open(screenshot.path_full, '_blank')}
-                         className="screenshot-image"
-                       />
-                     </div>
-                   ))
-                 ) : (
-                   // Fallback placeholder screenshots
-                   <div className="screenshots-placeholder">
-                      <div className="screenshot"></div>
-                      <div className="screenshot"></div>
-                      <div className="screenshot"></div>
-                      <div className="screenshot"></div>
-                   </div>
-                 )}
-               </div>
-            </div>
-            
-            {/* About the game section */}
-            {details.about_the_game && (
-              <div className="info-block about-game-block">
-                <h3>About the Game</h3>
-                <div dangerouslySetInnerHTML={{ __html: details.about_the_game }}></div>
+            {/* Meta Information */}
+            <div className="meta-info-section">
+              <div className="release-info">
+                <span className="release-date">Released on {details.release_date?.date || 'N/A'}</span>
+                <span className="publisher">Published by {details.publishers?.join(', ') || 'N/A'}</span>
               </div>
-            )}
-            
-            {/* Short description fallback */}
-            {!details.about_the_game && details.short_description && (
-              <div className="info-block description-block" dangerouslySetInnerHTML={{ __html: details.short_description }}>
+              <DrmNotice drmNotice={details.drm_notice} />
+            </div>
+
+            {/* Screenshots */}
+            <div className="screenshots-section">
+              <div className="screenshots-grid">
+                {details.screenshots && details.screenshots.length > 0 ? (
+                  details.screenshots.slice(0, 4).map((screenshot, index) => (
+                    <div key={screenshot.id} className="screenshot-item">
+                      <img 
+                        src={screenshot.path_thumbnail} 
+                        alt={`Screenshot ${index + 1}`}
+                        onClick={() => window.open(screenshot.path_full, '_blank')}
+                        className="screenshot-image"
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="screenshots-placeholder">
+                     <div className="screenshot"></div>
+                     <div className="screenshot"></div>
+                     <div className="screenshot"></div>
+                     <div className="screenshot"></div>
+                  </div>
+                )}
               </div>
-            )}
-            {/* More description sections */}
+            </div>
+
+            {/* About the Game */}
+            <div className="about-section">
+              <h2 className="section-title">About the Game</h2>
+              {details.about_the_game ? (
+                <div className="game-description" dangerouslySetInnerHTML={{ __html: details.about_the_game }}></div>
+              ) : details.short_description ? (
+                <div className="game-description" dangerouslySetInnerHTML={{ __html: details.short_description }}></div>
+              ) : (
+                <p className="no-description">No description available.</p>
+              )}
+            </div>
+
           </div>
+
           <div className="game-detail-page__right-col">
-            <div className="collapsible-section">
-              <div className="section-header">
-                <h3>Achievements</h3>
-                <FaChevronUp />
-              </div>
-              <div className="section-content achievements-locked">
+            {/* Achievements Card */}
+            <div className="stat-card">
+              <h3>Achievements</h3>
+              <div className="stat-content achievements-locked">
                 <FaLock />
-                <p>Sign in to see achievements</p>
+                <span>Sign in to see achievements</span>
               </div>
             </div>
-            <div className="collapsible-section">
-              <div className="section-header">
-                <h3>Stats</h3>
-                <FaChevronUp />
-              </div>
-               <div className="section-content stats-content">
-                  <div className="stat-item">
-                      <p>Downloads</p>
-                      <p>163,628</p>
-                  </div>
-                   <div className="stat-item">
-                      <p>Active Players</p>
-                      <p>175</p>
-                  </div>
-              </div>
-            </div>
-             <div className="collapsible-section">
-              <div className="section-header">
-                <h3>HowLongToBeat</h3>
-                <FaChevronUp />
-              </div>
-              <div className="section-content hltb-content">
-                 <div className="hltb-item">
-                      <p>Main Story</p>
-                      <p>16 hours</p>
-                  </div>
-              </div>
-            </div>
-            <div className="collapsible-section">
-              <div className="section-header">
-                <h3>System requirements</h3>
-                <FaChevronUp />
-              </div>
-               <div className="section-content requirements-content">
-                 {/* System requirements content */}
-                 <p>Minimum and Recommended tabs would go here.</p>
+
+            {/* System Requirements Card */}
+            <div className="stat-card requirements-card">
+              <h3>System Requirements</h3>
+              <div className="stat-content requirements-content">
+                <SystemRequirements requirements={details.pc_requirements} compact={true} />
               </div>
             </div>
           </div>
@@ -379,3 +349,4 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
 };
 
 export default GameDetails;
+
