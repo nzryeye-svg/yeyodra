@@ -5,7 +5,7 @@ import { Header } from './components/Header';
 import { GameCard } from './components/GameCard';
 import GameDetails from './components/GameDetails';
 import { Featured } from './components/Featured';
-import { CategoryButtons } from './components/CategoryButtons';
+
 
 import { Bypass } from './components/Bypass';
 import { Settings } from './components/Settings';
@@ -21,7 +21,7 @@ function App() {
   const [error, setError] = useState('');
   const [downloadingGames, setDownloadingGames] = useState(new Set());
 
-  const [activeCategory, setActiveCategory] = useState('hot');
+
   const [selectedGame, setSelectedGame] = useState(null);
   const [showingDetails, setShowingDetails] = useState(false);
   const [selectedLibraryGame, setSelectedLibraryGame] = useState(null);
@@ -189,7 +189,6 @@ function App() {
 
       case 'bypass':
         return 'Bypass Tools';
-
       case 'settings':
         return 'Settings';
       case 'peak':
@@ -223,6 +222,7 @@ function App() {
           onSearchSubmit={handleSearchSubmit}
           showBackButton={activeTab === 'catalogue' && selectedGame}
           onBack={() => setSelectedGame(null)}
+          showSearchBar={activeTab === 'catalogue'}
         />
           
           <section className="app-container__content">
@@ -241,38 +241,32 @@ function App() {
                   isLoading={isLoadingFeatured}
                   onGameClick={handleFeaturedGameClick}
                 />
-                <CategoryButtons 
-                  activeCategory={activeCategory} 
-                  onCategoryChange={setActiveCategory} 
-                />
 
-                <div className="game-section">
-                  <h2 className="section-title">🔥 Hot now</h2>
-                  <div className="game-grid">
-                    {isLoadingFeatured && (
-                      <div className="loading-container">
-                        <span className="loading-spinner"></span>
-                        <p>Loading featured games...</p>
-                      </div>
-                    )}
-                    
-                    {!isLoadingFeatured && featuredGames.length > 0 && (
-                      featuredGames.slice(1).map((game) => (
-                        <GameCard
-                          key={game.app_id}
-                          game={game}
-                          onShowDetails={handleFeaturedGameClick}
-                        />
-                      ))
-                    )}
+                <div className="game-grid">
+                  {isLoadingFeatured && (
+                    <div className="loading-container">
+                      <span className="loading-spinner"></span>
+                      <p>Loading featured games...</p>
+                    </div>
+                  )}
+                  
+                  {!isLoadingFeatured && featuredGames.length > 0 && (
+                    featuredGames.slice(1).map((game) => (
+                      <GameCard
+                        key={game.app_id}
+                        game={game}
+                        onShowDetails={handleFeaturedGameClick}
+                      />
+                    ))
+                  )}
 
-                    {!isLoadingFeatured && featuredGames.length === 0 && (
-                      <div className="placeholder-container">
-                        <p>No featured games available</p>
-                      </div>
-                    )}
-                  </div>
+                  {!isLoadingFeatured && featuredGames.length === 0 && (
+                    <div className="placeholder-container">
+                      <p>No featured games available</p>
+                    </div>
+                  )}
                 </div>
+
               </div>
             )}
 
@@ -328,8 +322,6 @@ function App() {
                 )}
               </div>
             )}
-
-
 
             {/* Bypass Tab */}
             {activeTab === 'bypass' && (

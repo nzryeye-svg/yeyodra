@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { 
-  FaSignInAlt, FaHome, FaThLarge, FaCog, FaGamepad, FaFilter, FaShieldAlt 
+  FaSignInAlt, FaHome, FaThLarge, FaCog, FaGamepad, FaFilter, FaShieldAlt
 } from 'react-icons/fa';
 import { IoReloadCircleOutline } from 'react-icons/io5';
 import { FiRefreshCw } from 'react-icons/fi';

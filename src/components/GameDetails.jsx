@@ -90,17 +90,23 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
   const handleUpdate = async () => {
     if (!details) return;
     setIsUpdating(true);
+    
+    // Show info notification about starting the process
+    if (showNotification && showNotification.showInfo) {
+      showNotification.showInfo(`Starting update for ${details.name}...`, 'Game Update');
+    }
+    
     try {
       const result = await invoke('update_game_files', {
         appId: game.app_id,
         gameName: details.name
       });
-      if (showNotification) {
-        showNotification(result, 'success');
+      if (showNotification && showNotification.showSuccess) {
+        showNotification.showSuccess(result, 'Game Update');
       }
     } catch (err) {
-      if (showNotification) {
-        showNotification(`Update failed: ${err.toString()}`, 'error');
+      if (showNotification && showNotification.showError) {
+        showNotification.showError(`Update failed: ${err.toString()}`, 'Game Update');
       }
     } finally {
       setIsUpdating(false);
@@ -118,16 +124,22 @@ const GameDetails = ({ game, onBack, isLibraryMode = false, showNotification = n
     if (!confirmed) return;
     
     setIsRemoving(true);
+    
+    // Show info notification about starting the process
+    if (showNotification && showNotification.showInfo) {
+      showNotification.showInfo(`Starting removal of ${details.name}...`, 'Game Removal');
+    }
+    
     try {
       const result = await invoke('remove_game', { appId: game.app_id });
-      if (showNotification) {
-        showNotification(result, 'success');
+      if (showNotification && showNotification.showSuccess) {
+        showNotification.showSuccess(result, 'Game Removal');
       }
       // Go back to library after removal
       setTimeout(() => onBack(), 1500);
     } catch (err) {
-      if (showNotification) {
-        showNotification(`Remove failed: ${err.toString()}`, 'error');
+      if (showNotification && showNotification.showError) {
+        showNotification.showError(`Remove failed: ${err.toString()}`, 'Game Removal');
       }
     } finally {
       setIsRemoving(false);

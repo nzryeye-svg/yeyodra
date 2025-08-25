@@ -113,15 +113,24 @@ const DlcManager = ({ game, onClose, showNotification }) => {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     
+    // Show info notification about starting the process
+    if (showNotification && showNotification.showInfo) {
+      showNotification.showInfo('Saving DLC configuration...', 'DLC Management');
+    }
+    
     try {
       const result = await invoke('sync_dlcs_in_lua', {
         mainAppId: game.app_id,
         dlcIdsToSet: Array.from(selectedDlcs),
       });
-      showNotification(result, 'success');
+      if (showNotification && showNotification.showSuccess) {
+        showNotification.showSuccess(result, 'DLC Management');
+      }
       onClose();
     } catch (err) {
-      showNotification(`Error saving DLCs: ${err.toString()}`, 'error');
+      if (showNotification && showNotification.showError) {
+        showNotification.showError(`Error saving DLCs: ${err.toString()}`, 'DLC Management');
+      }
     } finally {
       setIsSaving(false);
     }
