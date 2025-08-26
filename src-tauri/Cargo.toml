@@ -1,8 +1,8 @@
 [package]
-name = "yeyodra"
+name = "zenith"
 version = "0.1.0"
 description = "Steam Game Manager"
-authors = ["Yeyodra Team"]
+authors = ["Zenith Team"]
 license = "MIT"
 repository = ""
 edition = "2021"
@@ -13,10 +13,10 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "window-set-title", "window-set-size", "window-hide", "window-set-resizable", "window-show", "window-request-user-attention", "window-set-position", "window-set-min-size", "window-set-decorations", "window-set-max-size", "window-set-fullscreen", "window-set-focus", "window-close", "window-minimize", "window-create", "window-unminimize", "window-maximize", "window-unmaximize", "window-center", "dialog-all", "fs-all", "http-all", "shell-open"] }
+tauri = { version = "1.5", features = [ "dialog-all", "fs-all", "http-all", "shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.28", features = ["full"] }
+tokio = { version = "1.28", features = ["full", "time"] }
 reqwest = { version = "0.11", features = ["json", "stream"] }
 anyhow = "1.0"
 futures = "0.3"
@@ -32,6 +32,9 @@ regex = "1.10"
 winreg = "0.52"
 chrono = { version = "0.4", features = ["serde"] }
 whoami = "1.4"
+machine-uid = "0.2"
+sha2 = "0.10"
+hex = "0.4"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

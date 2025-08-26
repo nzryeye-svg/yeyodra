@@ -13,7 +13,9 @@ const SIDEBAR_MAX_WIDTH = 450;
 
 const initialSidebarWidth = localStorage.getItem('sidebarWidth');
 
-export function Sidebar({ activeTab, selectedLibraryGame, onTabChange, showNotification }) {
+export function Sidebar({ activeTab, selectedLibraryGame, onTabChange, showNotification, customerName, licenseInfo }) {
+  console.log('Sidebar received customerName:', customerName);
+  console.log('Sidebar received licenseInfo:', licenseInfo);
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(250);
   const [libraryGames, setLibraryGames] = useState([]);
@@ -21,10 +23,19 @@ export function Sidebar({ activeTab, selectedLibraryGame, onTabChange, showNotif
   const [libraryFilter, setLibraryFilter] = useState('');
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
 
+  // Check if user has premium access
+  const isPremium = licenseInfo?.license_type === 'premium';
+  
   const navigationItems = [
     { key: 'home', label: 'Home', icon: <FaHome /> },
     { key: 'catalogue', label: 'Catalogue', icon: <FaThLarge /> },
-    { key: 'bypass', label: 'Bypass', icon: <FaShieldAlt /> },
+    { 
+      key: 'bypass', 
+      label: 'Bypass', 
+      icon: <FaShieldAlt />, 
+      isPremiumOnly: true,
+      displayLabel: isPremium ? 'Bypass' : 'Bypass 👑'
+    },
     { key: 'settings', label: 'Settings', icon: <FaCog /> },
   ];
 
@@ -129,7 +140,18 @@ export function Sidebar({ activeTab, selectedLibraryGame, onTabChange, showNotif
         <div className="sidebar__auth">
           <button className="sidebar__auth-button">
             <span className="sidebar__auth-icon"><FaSignInAlt /></span>
-            <span>Sign in</span>
+            <div className="sidebar__auth-info">
+              <span className="sidebar__auth-name">{customerName || licenseInfo?.customer_name || 'Guest'}</span>
+              {(customerName || licenseInfo?.customer_name) && (
+                <span className={`sidebar__auth-role ${
+                  licenseInfo?.license_type === 'premium' ? 'premium' : ''
+                }`}>
+                  {licenseInfo?.license_type === 'basic' ? 'Free' : 
+                   licenseInfo?.license_type === 'premium' ? 'Premium' : 
+                   licenseInfo?.license_type || 'Free'}
+                </span>
+              )}
+            </div>
           </button>
         </div>
 
@@ -142,15 +164,16 @@ export function Sidebar({ activeTab, selectedLibraryGame, onTabChange, showNotif
                   key={item.key}
                   className={`sidebar__menu-item ${
                     activeTab === item.key ? 'sidebar__menu-item--active' : ''
-                  }`}
+                  } ${item.isPremiumOnly && !isPremium ? 'sidebar__menu-item--premium' : ''}`}
                 >
                   <button
                     type="button"
                     className="sidebar__menu-item-button"
                     onClick={() => onTabChange(item.key)}
+                    title={item.isPremiumOnly && !isPremium ? 'Premium Feature - Upgrade Required' : ''}
                   >
                     <span className="sidebar__menu-item-icon">{item.icon}</span>
-                    <span>{item.label}</span>
+                    <span>{item.displayLabel || item.label}</span>
                   </button>
                 </li>
               ))}

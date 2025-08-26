@@ -6,11 +6,13 @@ mod models;
 mod game_database;
 mod library;
 mod steam_api;
+mod hwid;
 
 use commands::*;
 use models::*;
 use game_database::GameDatabase;
 use library::*;
+use hwid::*;
 use std::sync::{Arc, Mutex};
 use once_cell::sync::Lazy;
 
@@ -90,7 +92,12 @@ fn main() {
             launch_game_executable,
             // Settings functions
             select_download_directory,
-            open_download_directory
+            open_download_directory,
+            // HWID functions
+            generate_hwid,
+            check_hwid_authorization,
+            get_hwid_status,
+            refresh_hwid_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

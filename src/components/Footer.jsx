@@ -1,6 +1,6 @@
 import './Footer.scss';
 
-export function Footer({ downloadStatus = 'No downloads in progress', version = 'v0.1.0 "Yeyodra"' }) {
+export function Footer({ downloadStatus = 'No downloads in progress', version = 'v0.1.0 "Zenith"' }) {
   return (
     <footer className="footer">
       <div className="footer__left">

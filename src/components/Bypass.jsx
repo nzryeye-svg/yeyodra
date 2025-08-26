@@ -4,9 +4,10 @@ import { listen } from '@tauri-apps/api/event';
 import { LaunchGameModal } from './LaunchGameModal';
 import { ConfirmationModal } from './ConfirmationModal';
 import { BypassProgressBar } from './BypassProgressBar';
+import { PremiumNotice } from './PremiumNotice';
 import './Bypass.scss';
 
-export function Bypass({ showNotification }) {
+export function Bypass({ showNotification, licenseInfo }) {
   const [isLoading, setIsLoading] = useState(false);
   const [games, setGames] = useState([]);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
@@ -65,7 +66,7 @@ export function Bypass({ showNotification }) {
     },
     {
       appId: '812140', // Assassins Creed Odyssey
-      bypassUrl: 'https://cdn.discordapp.com/attachments/1390024754827624528/1404350073873109042/Assassins_Creed_Odyssey_Fix_Empress.zip?ex=68acaaad&is=68ab592d&hm=6214cedd6b11a18170f09d93e2feb9925834ac16a8872a930f66fb38ee8dd1b6&'
+      bypassUrl: 'https://drive.google.com/file/d/1hjza_zWJMGQ5MFFslwNd4j_26Lq_d7KX/view?usp=drive_link'
     },
     {
       appId: '311560', // Assassin's Creed Rogue
@@ -331,6 +332,18 @@ export function Bypass({ showNotification }) {
       gameInfo: null
     });
   };
+
+  // Check if user has premium access
+  const isPremium = licenseInfo?.license_type === 'premium';
+  
+  // If not premium, show premium notice
+  if (!isPremium) {
+    return (
+      <div className="bypass">
+        <PremiumNotice featureName="Bypass Tools" />
+      </div>
+    );
+  }
 
   return (
     <div className="bypass">

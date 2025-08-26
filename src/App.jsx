@@ -12,8 +12,12 @@ import { Settings } from './components/Settings';
 
 import NotificationSystem from './components/NotificationSystem';
 import useNotification from './hooks/useNotification';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
+  const { customerName, licenseInfo } = useAuth();
+  console.log('App from context - customerName:', customerName);
+  console.log('App from context - licenseInfo:', licenseInfo);
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -195,13 +199,13 @@ function App() {
         // Show game name instead of "PEAK" when a library game is selected
         return selectedLibraryGame ? selectedLibraryGame.name : 'My Library';
       default:
-        return 'Yeyodra';
+        return 'Zenith';
     }
   };
 
   return (
     <div className="root-container">
-      <main className="main-content">
+    <main className="main-content">
         <Sidebar 
           activeTab={activeTab} 
           selectedLibraryGame={selectedLibraryGame}
@@ -212,6 +216,8 @@ function App() {
             }
           }}
           showNotification={{ showSuccess, showError, showWarning, showInfo }}
+          customerName={customerName}
+          licenseInfo={licenseInfo}
         />
         
         <div className="app-container">
@@ -327,6 +333,7 @@ function App() {
             {activeTab === 'bypass' && (
               <Bypass 
                 showNotification={{ showSuccess, showError, showWarning, showInfo }}
+                licenseInfo={licenseInfo}
               />
             )}
 
@@ -361,11 +368,11 @@ function App() {
       </main>
       
       {/* Notification System */}
-      <NotificationSystem
-        notifications={notifications}
-        removeNotification={removeNotification}
-      />
-    </div>
+             <NotificationSystem
+         notifications={notifications}
+         removeNotification={removeNotification}
+       />
+     </div>
   );
 }
 

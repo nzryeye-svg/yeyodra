@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "Yeyodra",
+    "productName": "Zenith",
     "version": "0.1.0"
   },
   "tauri": {
@@ -52,7 +52,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "Yeyodra - Steam Game Manager",
+        "title": "Zenith - Steam Game Manager",
         "width": 1000,
         "height": 700,
         "minWidth": 800,
